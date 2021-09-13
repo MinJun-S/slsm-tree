@@ -2,7 +2,7 @@
 #define TYPES_H
 
 typedef int32_t KEY_t;
-typedef struct VAL_t  //struct·Î º¯°æ
+typedef struct VAL_t
 {
     float x;
     float y; 
