@@ -82,7 +82,8 @@ void LSMTree::merge_down(vector<Level>::iterator current) {
         entry = merge_ctx.next();
 
         // Remove deleted keys from the final level
-        if (!(next == levels.end() - 1 && entry.val == VAL_TOMBSTONE)) {
+        if (!(next == levels.end() - 1 && (entry.val.y == VAL_TOMBSTONE|| entry.val.x )))
+        {
             next->runs.front().put(entry);
         }
     }
@@ -164,7 +165,7 @@ void LSMTree::get(KEY_t key) {
     buffer_val = buffer.get(key);
 
     if (buffer_val != nullptr) {
-        if (*buffer_val != VAL_TOMBSTONE) cout << *buffer_val;
+        if (buffer_val->x != VAL_TOMBSTONE || buffer_val->y != VAL_TOMBSTONE) cout << buffer_val->x<<", "<<buffer_val->y; //val °ª ¼öÁ¤
         cout << endl;
         delete buffer_val;
         return;
@@ -211,7 +212,7 @@ void LSMTree::get(KEY_t key) {
     worker_pool.launch(search);
     worker_pool.wait_all();
 
-    if (latest_run >= 0 && latest_val != VAL_TOMBSTONE) cout << latest_val;
+    if (latest_run >= 0 && latest_val.x != VAL_TOMBSTONE && latest_val.y != VAL_TOMBSTONE) cout << latest_val.x <<", "<<latest_val.y;
     cout << endl;
 }
 
@@ -272,8 +273,8 @@ void LSMTree::range(KEY_t start, KEY_t end) {
 
     while (!merge_ctx.done()) {
         entry = merge_ctx.next();
-        if (entry.val != VAL_TOMBSTONE) {
-            cout << entry.key << ":" << entry.val;
+        if (entry.val.x != VAL_TOMBSTONE && entry.val.y != VAL_TOMBSTONE) {
+            cout << entry.key << ":" << entry.val.x<<", "<<entry.val.y;
             if (!merge_ctx.done()) cout << " ";
         }
     }
@@ -290,7 +291,9 @@ void LSMTree::range(KEY_t start, KEY_t end) {
 }
 
 void LSMTree::del(KEY_t key) {
-    put(key, VAL_TOMBSTONE);
+    VAL_t temp;
+    temp.x = VAL_TOMBSTONE; temp.y = VAL_TOMBSTONE;
+    put(key, temp);
 }
 
 void LSMTree::load(string file_path) {
