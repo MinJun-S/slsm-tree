@@ -15,12 +15,12 @@ void command_loop(LSMTree& tree) {
     while (cin >> command) {
         switch (command) {
         case 'p':
-            cin >> key_a >> val.x>>val.y;
+            cin >> val.x>>val.y;
 
             if (val.x < VAL_MIN || val.x > VAL_MAX || val.y < VAL_MIN || val.y > VAL_MAX){
                 die("Could not insert value " + to_string(val.x) + to_string(val.y)+ ": out of range.");
             } else {
-                tree.put(key_a, val);
+                tree.put(make_key(val.x,val.y), val);
             }
 
             break;

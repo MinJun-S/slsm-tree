@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <cmath>
 
 #include "lsm_tree.h"
 #include "merge.h"
@@ -309,4 +310,47 @@ void LSMTree::load(string file_path) {
     } else {
         die("Could not locate file '" + file_path + "'.");
     }
+}
+
+void show(KEY_t key)
+{
+    for (int i = 32; i >= 0; i--)
+    {
+        printf("%d", (key >> i) & 1);
+    }
+    printf("  %u \n",key);
+}
+KEY_t make_key(float x, float y)
+{
+    float x1 = GEO_X_MIN; float x2 = GEO_X_MAX; float y1 = GEO_Y_MIN; float y2 = GEO_Y_MAX;
+    float x_md, y_md;
+    KEY_t key=0;
+    KEY_t temp = 1; 
+    temp = temp << 31;
+    //show(temp);
+    for (int i = 15; i >= 0; i--)
+    {
+        x_md = (x2 + x1) / 2;
+        y_md = (y2 + y1) / 2;
+        if (x > x_md)
+        {
+            key += temp;
+            x1 = x_md;
+        }
+        else x2 = x_md;
+        temp = temp >> 1;
+        //show(temp);
+        if (y > y_md)
+        {
+            key += temp;
+            y1 = y_md;
+        }
+        else y2 = y_md;
+        temp = temp >> 1;
+        //show(temp);
+        //printf("%d %d %d \n", i, temp, key);
+    }
+    show(key);
+
+    return key;
 }

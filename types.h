@@ -1,7 +1,8 @@
 #ifndef TYPES_H
 #define TYPES_H
+#include <stdint.h>
 
-typedef int32_t KEY_t;
+typedef uint32_t KEY_t;
 typedef struct VAL_t  //struct·Î º¯°æ
 {
     float x;
