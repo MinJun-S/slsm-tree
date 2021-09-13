@@ -2,6 +2,7 @@
 #include <vector>
 #include <tuple>
 #include "types.h"
+#include "run.h"
 
 using namespace std;
 

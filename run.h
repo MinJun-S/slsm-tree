@@ -1,3 +1,6 @@
+#ifndef RUN_H
+#define RUN_H
+
 #include <vector>
 
 #include <string.h>
@@ -28,4 +31,12 @@ public:
     VAL_t * get(KEY_t);
     vector<entry_t> * range(KEY_t, KEY_t);
     void put(entry_t);
+    bool remaining(void) const 
+    {
+        if (max_size - size > 0)
+            return 1;
+        else
+            return 0;
+    }
 };
+#endif

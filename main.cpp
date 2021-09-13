@@ -87,6 +87,7 @@ int main(int argc, char *argv[]) {
     }
 
     buffer_max_entries = buffer_num_pages * getpagesize() / sizeof(entry_t);
+    //printf("%d", buffer_max_entries);
     LSMTree tree(buffer_max_entries, depth, fanout, num_threads, bf_bits_per_entry);
     command_loop(tree);
 

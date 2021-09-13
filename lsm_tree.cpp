@@ -37,8 +37,9 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
     max_run_size = buffer_max_entries;
 
     while ((depth--) > 0) {
+        fanout *= 4;
         levels.emplace_back(fanout, max_run_size);
-        max_run_size *= fanout;
+        max_run_size *= fanout; //알아서설정
     }
 }
 
