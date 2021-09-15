@@ -43,40 +43,69 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
     }
 }
 
-void LSMTree::merge_down(vector<Level>::iterator current) {
-    vector<Level>::iterator next;
+void LSMTree::merge_down(Run &current_run) {	
+	
+	//이게맞나
+	Run next_runs_list[levels->max_runs] = levels->runs_list;
+
+    //vector<Level>::iterator next;
     MergeContext merge_ctx;
-    entry_t entry;
+    entry_t entry;	
 
-    assert(current >= levels.begin());
+    assert(current_run >= levels.begin());
 
-    if (current->remaining() > 0) {
+    if (current_run->remaining() > 0) {
         return;
-    } else if (current >= levels.end() - 1) {
-        die("No more space in tree.");
+    } else if (current_run >= levels.end() - 1) {
+        die("No more space of run in tree.");
     } else {
-        next = current + 1;
+        //next = current + 1; //-> level개념에서 접근하는건데 어케 수정해야??
     }
 
     /*
      * If the next level does not have space for the current level,
      * recursively merge the next level downwards to create some
      */
-
-    if (next->remaining() == 0) {
-        merge_down(next);
-        assert(next->remaining() > 0);
-    }
+	for (int i = 0; i < 4; i++) {
+		if (next_runs_list[i]->remaining() == 0) {
+			merge_down(next_runs_list[i]);
+			assert(next_runs_list[i]->remaining() > 0);
+		}
+	}
+    
 
     /*
      * Merge all runs in the current level into the first
      * run in the next level
+
+	 <current_run을 4분할해서 next_runs_list[i]에 merge>
      */
 
-    for (auto& run : current->runs) {
-        merge_ctx.add(run.map_read(), run.size);
-    }
+    //for (auto& run : current->runs) {
+    //    merge_ctx.add(run.map_read(), run.size);
+    //}
+	/*
+	//야이걸 어케...
+	for (int i = 0; i < 4; i++) {
+		next_runs_list[i].map_write();
 
+		//current_run.map_read();  //갖고와서
+		//							4등분에 대해 while문 돌리면?
+
+		while (!merge_ctx.done()) {
+			entry = merge_ctx.next();			
+
+			// Remove deleted keys from the final level
+			if (!(next == levels.end() - 1 && (entry.val.y == VAL_TOMBSTONE || entry.val.x)))
+			{
+				next->runs.front().put(entry);
+			}
+		}
+
+		next->runs.front().unmap();
+
+	}
+	*/
     next->runs.emplace_front(next->max_run_size, bf_bits_per_entry);
     next->runs.front().map_write();
 
@@ -92,16 +121,17 @@ void LSMTree::merge_down(vector<Level>::iterator current) {
 
     next->runs.front().unmap();
 
-    for (auto& run : current->runs) {
-        run.unmap();
-    }
+    //for (auto& run : current->runs) {
+    //    run.unmap();
+    //}
+	current_run.unmap();
 
     /*
      * Clear the current level to delete the old (now
      * redundant) entry files.
      */
 
-    current->runs.clear();
+    current_run.clear();
 }
 
 void LSMTree::put(KEY_t key, VAL_t val) {
@@ -321,6 +351,7 @@ void show(KEY_t key)
     }
     printf("  %u \n",key);
 }
+
 KEY_t make_key(float x, float y)
 {
     float x1 = GEO_X_MIN; float x2 = GEO_X_MAX; float y1 = GEO_Y_MIN; float y2 = GEO_Y_MAX;
