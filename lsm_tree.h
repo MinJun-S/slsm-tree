@@ -23,7 +23,7 @@ class LSMTree {
     float bf_bits_per_entry;
     vector<Level> levels;
     Run * get_run(int);
-    void merge_down(vector<Level>::iterator);
+    void merge_down(vector<Level>::iterator, int);
 public:
     LSMTree(int, int, int, int, float);
     void put(KEY_t, VAL_t);

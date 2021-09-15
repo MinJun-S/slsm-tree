@@ -15,6 +15,6 @@ public:
        {
            runs_list[i] = NULL;
        }
-    } //max_runs : run ¸î°³ °¡ÁúÁö, max_run size, entry °³¼ö
+    } //max_runs : run Â¸Ã®Â°Â³ Â°Â¡ÃÃºÃÃ¶, max_run size, entry Â°Â³Â¼Ã¶
     bool remaining(void) const {return max_runs - runs.size();}
 };

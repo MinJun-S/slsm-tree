@@ -11,9 +11,11 @@
 
 using namespace std;
 
-Run::Run(long max_size, float bf_bits_per_entry) :
+Run::Run(long max_size, float bf_bits_per_entry, KEY_t max_key, KEY_t min_key) :
          max_size(max_size),
-         bloom_filter(max_size * bf_bits_per_entry)
+         bloom_filter(max_size * bf_bits_per_entry),
+         max_key(max_key),
+         min_key(min_key)
 {
     char *tmp_fn;
 

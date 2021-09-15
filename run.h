@@ -21,9 +21,10 @@ class Run {
     int mapping_fd;
     long file_size() {return max_size * sizeof(entry_t);}
 public:
+    int idx_level;
     long size, max_size;
     string tmp_file;
-    Run(long, float);
+    Run(long, float, KEY_t, KEY_t);
     ~Run(void);
     entry_t * map_read(size_t, off_t);
     entry_t * map_read(void);

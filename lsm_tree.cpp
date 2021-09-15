@@ -37,35 +37,57 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
     max_run_size = buffer_max_entries;
 
     while ((depth--) > 0) {
-        fanout *= 4;
+        if (fanout < 64) {
+            fanout *= 4;
+        }
+        else {
+            max_run_size *= 2
+        }
         levels.emplace_back(fanout, max_run_size);
-        max_run_size *= fanout; //�˾Ƽ�����
+
     }
 }
 
-void LSMTree::merge_down(vector<Level>::iterator current) {
-    vector<Level>::iterator next;
+// run input
+// vector<Run> runs;
+void LSMTree::merge_down(vector<level>::iterator current, int idx) {
+    vector<level>::iterator next;
+    Run** runs_list;
     MergeContext merge_ctx;
+    MergeContext merge_temp;
     entry_t entry;
-
+  
     assert(current >= levels.begin());
 
-    if (current->remaining() > 0) {
+    if (current.runs_list[idx]->remaining() > 0) {
         return;
-    } else if (current >= levels.end() - 1) {
-        die("No more space in tree.");
-    } else {
+    }
+    else if (current >= levels.end() - 1) {
+        die("no more space in tree.");
+    }
+    else {
         next = current + 1;
     }
 
     /*
-     * If the next level does not have space for the current level,
+     * if the next level does not have space for the current level,
      * recursively merge the next level downwards to create some
      */
 
-    if (next->remaining() == 0) {
-        merge_down(next);
-        assert(next->remaining() > 0);
+    if (current.runs_list[idx].idx_level < 3) {
+        for (int i = 4 * idx; i < 4 * idx + 4; i++) {
+            if (next.runs_list[i]->remaining() <= 0) {
+                merge_down(next, i);
+                assert(next.runs_list[i]->remaining() > 0);
+            }
+
+        }
+    }
+    else {
+        if (next.runs_list[idx]->remaining() <= 0) {
+            merge_down(next, idx);
+            assert(next.runs_list[idx]->remaining() > 0);
+        }
     }
 
     /*
@@ -73,36 +95,133 @@ void LSMTree::merge_down(vector<Level>::iterator current) {
      * run in the next level
      */
 
-    for (auto& run : current->runs) {
-        merge_ctx.add(run.map_read(), run.size);
-    }
+    merge_ctx.add(current.runs_list[idx].map_read(), run.size);
 
-    next->runs.emplace_front(next->max_run_size, bf_bits_per_entry);
-    next->runs.front().map_write();
+    // run ÁöÁ¤ºÎºÐ¿¡ Ãß°¡
+    if (current.runs_list[idx].idx_level < 3) {
+        for (int i = idx * 4; i <= idx * 4 + 3; i++) {
+            try {
+                merge_temp.add(next.runs_list[i].map_read(), run.size);
+            }
+            catch{
 
-    while (!merge_ctx.done()) {
-        entry = merge_ctx.next();
+                temp = max / pow(4, next);
+                max_key = temp * (i + 1);
+                min_key = temp * i;
 
-        // Remove deleted keys from the final level
-        if (!(next == levels.end() - 1 && (entry.val.y == VAL_TOMBSTONE|| entry.val.x )))
-        {
-            next->runs.front().put(entry);
+                next.runs_list[i](next->max_run_size, bf_bits_per_entry, max_key, min_key);  // °³°°
+                next.runs_list[i].map_write();
+            }
+            while (!merge_ctx.done()) {
+                entry = merge_ctx.next();
+
+                // Remove deleted keys from the final level
+                if (entry.key <= next.runs_list[i].max_key && entry.key > next.runs_list[i].min_key)
+                {
+                    next.runs_list[i].put(entry);
+                }
+            }
+            next.runs_list[i].unmap();
         }
     }
+    else {
+        try {
+            merge_temp.add(next.runs_list[idx].map_read(), run.size);
+        }
+        catch{
 
-    next->runs.front().unmap();
+            temp = max / pow(4, next);
+            max_key = temp * (i + 1);
+            min_key = temp * i;
 
-    for (auto& run : current->runs) {
-        run.unmap();
+            next.runs_list[idx](next->max_run_size, bf_bits_per_entry, max_key, min_key);  // °³°°
+            next.runs_list[idx].map_write();
+        }
+        while (!merge_ctx.done()) {
+            entry = merge_ctx.next();
+
+            // Remove deleted keys from the final level
+            if (entry.key <= next.runs_list[idx].max_key && entry.key > next.runs_list[idx].min_key)
+            {
+                next.runs_list[idx].put(entry);
+            }
+        }
+        next.runs_list[idx].unmap();
     }
+
+    //next->runs.emplace_front(next->max_run_size, bf_bits_per_entry);
+    //next->runs.front().map_write();
+
+    current.runs_list[idx].unmap();
 
     /*
      * Clear the current level to delete the old (now
      * redundant) entry files.
      */
 
-    current->runs.clear();
+    current.runs_list[idx].clear();
 }
+
+//void lsmtree::merge_down(vector<level>::iterator current) {
+//    vector<level>::iterator next;
+//    mergecontext merge_ctx;
+//    entry_t entry;
+//
+//    assert(current >= levels.begin());
+//
+//    if (current->remaining() > 0) {
+//        return;
+//    } else if (current >= levels.end() - 1) {
+//        die("no more space in tree.");
+//    } else {
+//        next = current + 1;
+//    }
+//
+//    /*
+//     * if the next level does not have space for the current level,
+//     * recursively merge the next level downwards to create some
+//     */
+//
+//    if (next->remaining() == 0) {
+//        merge_down(next);
+//        assert(next->remaining() > 0);
+//    }
+//
+//    /*
+//     * merge all runs in the current level into the first
+//     * run in the next level
+//     */
+//
+//    for (auto& run : current->runs) {
+//        merge_ctx.add(run.map_read(), run.size);
+//    }
+//
+//    next->runs.emplace_front(next->max_run_size, bf_bits_per_entry);
+//    next->runs.front().map_write();
+//
+//    while (!merge_ctx.done()) {
+//        entry = merge_ctx.next();
+//
+//        // remove deleted keys from the final level
+//        if (!(next == levels.end() - 1 && (entry.val.y == val_tombstone|| entry.val.x )))
+//        {
+//            next->runs.front().put(entry);
+//        }
+//    }
+//
+//    next->runs.front().unmap();
+//
+//    for (auto& run : current->runs) {
+//        run.unmap();
+//    }
+//
+//    /*
+//     * clear the current level to delete the old (now
+//     * redundant) entry files.
+//     */
+//
+//    current->runs.clear();
+//}
 
 void LSMTree::put(KEY_t key, VAL_t val) {
     /*
@@ -118,7 +237,7 @@ void LSMTree::put(KEY_t key, VAL_t val) {
      * to create space
      */
 
-    merge_down(levels.begin());
+    merge_down(levels.begin(), 0);
 
     /*
      * Flush the buffer to level 0
@@ -199,7 +318,7 @@ void LSMTree::get(KEY_t key) {
     buffer_val = buffer.get(key);
 
     if (buffer_val != nullptr) {
-        if (buffer_val->x != VAL_TOMBSTONE || buffer_val->y != VAL_TOMBSTONE) cout << buffer_val->x<<", "<<buffer_val->y; //val �� ����
+        if (buffer_val->x != VAL_TOMBSTONE || buffer_val->y != VAL_TOMBSTONE) cout << buffer_val->x<<", "<<buffer_val->y; //val °ª ¼öÁ¤
         cout << endl;
         delete buffer_val;
         return;
