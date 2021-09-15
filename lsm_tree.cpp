@@ -41,7 +41,7 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
             fanout *= 4;
         }
         else {
-            max_run_size *= 2
+            max_run_size *= 2;
         }
         levels.emplace_back(fanout, max_run_size);
 
