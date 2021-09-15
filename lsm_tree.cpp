@@ -104,13 +104,16 @@ void LSMTree::merge_down(vector<level>::iterator current, int idx) {
                 merge_temp.add(next.runs_list[i].map_read(), run.size);
             }
             catch{
-
-                temp = max / pow(4, next);
+                temp = 4294967295 / pow(4, next);
                 max_key = temp * (i + 1);
                 min_key = temp * i;
 
-                next.runs_list[i](next->max_run_size, bf_bits_per_entry, max_key, min_key);  // °³°°
-                next.runs_list[i].map_write();
+                Run tmp = Run(next->max_run_size, bf_bits_per_entry, max_key, min_key);
+                next.runs_list[i] = &tmp;
+                next.runs_list[i]->map_write();
+
+                //next.runs_list[i](next->max_run_size, bf_bits_per_entry, max_key, min_key);
+                //next.runs_list[i].map_write();
             }
             while (!merge_ctx.done()) {
                 entry = merge_ctx.next();
@@ -129,22 +132,16 @@ void LSMTree::merge_down(vector<level>::iterator current, int idx) {
             merge_temp.add(next.runs_list[idx].map_read(), run.size);
         }
         catch{
+            max_key = current.runs_list[idx].max_key;
+            min_key = current.runs_list[idx].min_key;
 
-            temp = max / pow(4, next);
-            max_key = temp * (i + 1);
-            min_key = temp * i;
-
-            next.runs_list[idx](next->max_run_size, bf_bits_per_entry, max_key, min_key);  // °³°°
-            next.runs_list[idx].map_write();
+            Run tmp = Run(next->max_run_size, bf_bits_per_entry, max_key, min_key);
+            next.runs_list[idx] = &tmp;
+            next.runs_list[idx]->map_write();
         }
         while (!merge_ctx.done()) {
             entry = merge_ctx.next();
-
-            // Remove deleted keys from the final level
-            if (entry.key <= next.runs_list[idx].max_key && entry.key > next.runs_list[idx].min_key)
-            {
-                next.runs_list[idx].put(entry);
-            }
+            next.runs_list[idx]->put(entry);
         }
         next.runs_list[idx].unmap();
     }
@@ -264,7 +261,7 @@ void LSMTree::put(KEY_t key, VAL_t val) {
         }
         if (levels.front().runs_list[i] == NULL)
         {
-            Run tmp = Run(levels.front().max_run_size, bf_bits_per_entry);
+            Run tmp = Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
             levels.front().runs_list[i] = &tmp;
         }
         levels.front().runs_list[i]->map_write();
