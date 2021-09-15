@@ -44,6 +44,7 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
             max_run_size *= 2
         }
         levels.emplace_back(fanout, max_run_size);
+
     }
 }
 
@@ -96,7 +97,7 @@ void LSMTree::merge_down(vector<level>::iterator current, int idx) {
 
     merge_ctx.add(current.runs_list[idx].map_read(), run.size);
 
-    // run ÁöÁ¤ºÎºĞ¿¡ Ãß°¡
+    // run ÃÃ¶ÃÂ¤ÂºÃÂºÃÂ¿Â¡ ÃƒÃŸÂ°Â¡
     if (current.runs_list[idx].idx_level < 3) {
         for (int i = idx * 4; i <= idx * 4 + 3; i++) {
             try {
@@ -108,7 +109,7 @@ void LSMTree::merge_down(vector<level>::iterator current, int idx) {
                 max_key = temp * (i + 1);
                 min_key = temp * i;
 
-                next.runs_list[i](next->max_run_size, bf_bits_per_entry, max_key, min_key);  // °³°°
+                next.runs_list[i](next->max_run_size, bf_bits_per_entry, max_key, min_key);  // Â°Â³Â°Â°
                 next.runs_list[i].map_write();
             }
             while (!merge_ctx.done()) {
@@ -133,7 +134,7 @@ void LSMTree::merge_down(vector<level>::iterator current, int idx) {
             max_key = temp * (i + 1);
             min_key = temp * i;
 
-            next.runs_list[idx](next->max_run_size, bf_bits_per_entry, max_key, min_key);  // °³°°
+            next.runs_list[idx](next->max_run_size, bf_bits_per_entry, max_key, min_key);  // Â°Â³Â°Â°
             next.runs_list[idx].map_write();
         }
         while (!merge_ctx.done()) {
@@ -241,7 +242,39 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     /*
      * Flush the buffer to level 0
      */
+    int i = 0; KEY_t temp = 4294967295;
+    
+    for (const auto& entry : buffer.entries) 
+    {
+        if (entry.key >= 0 && entry.key< temp/4)
+        {
+            i = 0;
+        }
+        else if (entry.key >= temp / 4 && entry.key < temp/2)
+        {
+            i = 1;
+        }
+        else if (entry.key >= temp/2 && entry.key < (temp/4) *3)
+        {
+            i = 2;
+        }
+        else
+        {
+            i = 3;
+        }
+        if (levels.front().runs_list[i] == NULL)
+        {
+            Run tmp = Run(levels.front().max_run_size, bf_bits_per_entry);
+            levels.front().runs_list[i] = &tmp;
+        }
+        levels.front().runs_list[i]->map_write();
+        levels.front().runs_list[i]->put(entry);
+           
+        levels.front().runs.front().unmap();
+    }
 
+
+    /*
     levels.front().runs.emplace_front(levels.front().max_run_size, bf_bits_per_entry);
     levels.front().runs.front().map_write();
 
@@ -250,7 +283,7 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     }
 
     levels.front().runs.front().unmap();
-
+    */
     /*
      * Empty the buffer and insert the key/value pair
      */
@@ -285,7 +318,7 @@ void LSMTree::get(KEY_t key) {
     buffer_val = buffer.get(key);
 
     if (buffer_val != nullptr) {
-        if (buffer_val->x != VAL_TOMBSTONE || buffer_val->y != VAL_TOMBSTONE) cout << buffer_val->x<<", "<<buffer_val->y; //val °ª ¼öÁ¤
+        if (buffer_val->x != VAL_TOMBSTONE || buffer_val->y != VAL_TOMBSTONE) cout << buffer_val->x<<", "<<buffer_val->y; //val Â°Âª Â¼Ã¶ÃÂ¤
         cout << endl;
         delete buffer_val;
         return;
@@ -469,7 +502,7 @@ KEY_t make_key(float x, float y)
         //show(temp);
         //printf("%d %d %d \n", i, temp, key);
     }
-    show(key);
+    //show(key);
 
     return key;
 }
