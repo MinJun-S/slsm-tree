@@ -10,7 +10,11 @@ public:
     std::deque<Run> runs;
     Level(int n, long s) : max_runs(n), max_run_size(s) 
     {
-        runs_list = new Run* [n];
+       runs_list = new Run* [n];
+       for (int i = 0; i < n; i++)
+       {
+           runs_list[i] = NULL;
+       }
     } //max_runs : run 몇개 가질지, max_run size, entry 개수
     bool remaining(void) const {return max_runs - runs.size();}
 };

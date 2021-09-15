@@ -123,7 +123,39 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     /*
      * Flush the buffer to level 0
      */
+    int i = 0; KEY_t temp = 4294967295;
+    
+    for (const auto& entry : buffer.entries) 
+    {
+        if (entry.key >= 0 && entry.key< temp/4)
+        {
+            i = 0;
+        }
+        else if (entry.key >= temp / 4 && entry.key < temp/2)
+        {
+            i = 1;
+        }
+        else if (entry.key >= temp/2 && entry.key < (temp/4) *3)
+        {
+            i = 2;
+        }
+        else
+        {
+            i = 3;
+        }
+        if (levels.front().runs_list[i] == NULL)
+        {
+            Run tmp = Run(levels.front().max_run_size, bf_bits_per_entry);
+            levels.front().runs_list[i] = &tmp;
+        }
+        levels.front().runs_list[i]->map_write();
+        levels.front().runs_list[i]->put(entry);
+           
+        levels.front().runs.front().unmap();
+    }
 
+
+    /*
     levels.front().runs.emplace_front(levels.front().max_run_size, bf_bits_per_entry);
     levels.front().runs.front().map_write();
 
@@ -132,7 +164,7 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     }
 
     levels.front().runs.front().unmap();
-
+    */
     /*
      * Empty the buffer and insert the key/value pair
      */
@@ -351,7 +383,7 @@ KEY_t make_key(float x, float y)
         //show(temp);
         //printf("%d %d %d \n", i, temp, key);
     }
-    show(key);
+    //show(key);
 
     return key;
 }

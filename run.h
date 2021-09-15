@@ -15,6 +15,7 @@ class Run {
     BloomFilter bloom_filter;
     vector<KEY_t> fence_pointers;
     KEY_t max_key;
+    KEY_t min_key;
     entry_t *mapping;
     size_t mapping_length;
     int mapping_fd;

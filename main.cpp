@@ -17,8 +17,9 @@ void command_loop(LSMTree& tree) {
         case 'p':
             cin >> val.x>>val.y;
 
-            if (val.x < VAL_MIN || val.x > VAL_MAX || val.y < VAL_MIN || val.y > VAL_MAX){
-                die("Could not insert value " + to_string(val.x) + to_string(val.y)+ ": out of range.");
+            if (val.x < VAL_MIN_X || val.x > VAL_MAX_X || val.y < VAL_MIN_Y || val.y > VAL_MAX_Y){
+                //die("Could not insert value " + to_string(val.x) + to_string(val.y)+ ": out of range.");
+                cout<<"Could not insert value " + to_string(val.x) +", " + to_string(val.y) + ": out of range.\n";
             } else {
                 tree.put(make_key(val.x,val.y), val);
             }
