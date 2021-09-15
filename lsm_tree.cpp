@@ -50,7 +50,7 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
 
 // run input
 // vector<Run> runs;
-void LSMTree::merge_down(vector<level>::iterator current, int idx) {
+void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     vector<level>::iterator next;
     Run** runs_list;
     MergeContext merge_ctx;
