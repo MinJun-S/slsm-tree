@@ -7,6 +7,7 @@
 #include "lsm_tree.h"
 #include "merge.h"
 #include "sys.h"
+#include "level.h"
 
 using namespace std;
 
@@ -50,8 +51,8 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
 
 // run input
 // vector<Run> runs;
-void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
-    vector<Level>::iterator next;
+void LSMTree::merge_down(vector<Level> current, int idx) {
+    vector<Level> next;
     Run** runs_list;
     MergeContext merge_ctx;
     MergeContext merge_temp;

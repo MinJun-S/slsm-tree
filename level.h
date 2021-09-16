@@ -18,3 +18,4 @@ public:
     } //max_runs : run ¸î°³ °¡ÁúÁö, max_run size, entry °³¼ö
     bool remaining(void) const {return max_runs - runs.size();}
 };
+
