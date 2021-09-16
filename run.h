@@ -18,6 +18,8 @@ class Run {
     size_t mapping_length;
     int mapping_fd;
     long file_size() {return max_size * sizeof(entry_t);}
+    //vector<int> spatial_filter;
+
 public:
     int idx_level;
     long size, max_size;

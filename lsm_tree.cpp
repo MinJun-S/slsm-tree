@@ -128,6 +128,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
                 {
                     next->runs_list[i]->put(entry);
                 }
+                else break;
             }
             next->runs_list[i]->unmap();
         }
@@ -235,58 +236,58 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     if (buffer.put(key, val)) {
         return;
     }
-
+    //cout << key << "\n";
     /*
      * If the buffer is full, flush level 0 if necessary
      * to create space
      */
-
-    merge_down(levels.begin(), 0);
+    //merge_down(levels.begin(), 0);
 
     /*
      * Flush the buffer to level 0
      */
     int i = 0; KEY_t temp = 4294967295;
-    
+    min_key = 0;
+    max_key = temp / 4 - 1;
+    int loop = 0;
+    if (levels.front().runs_list[i] == NULL)
+    {
+        Run tmp = Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
+        levels.front().runs_list[i] = &tmp;
+    }
+    levels.front().runs_list[i]->map_write();
+
+    //cout << "part1 \n";
     for (const auto& entry : buffer.entries) 
     {
-        if (entry.key >= 0 && entry.key< temp/4)
+        cout <<i<<" "<<entry.val.x<<" "<<entry.val.y<<" "<<entry.key<<" "<< loop << "\n";
+        if (entry.key > max_key)
         {
-            i = 0;
-            min_key = 0;
-            max_key = temp / 4 - 1;                 
-        }
-        else if (entry.key >= temp / 4 && entry.key < temp/2)
-        {
-            i = 1;
-            min_key = temp / 4;
-            max_key = temp / 2 -1;
-        }
-        else if (entry.key >= temp / 2 && entry.key < (temp / 4) * 3)
-        {
-            i = 2;
-            min_key = temp / 2;
-            max_key = (temp / 4) * 3 - 1;
-        }
-        else
-        {
-            i = 3;
-            min_key = (temp / 4) * 3;
-            max_key = temp;
+            //cout << "part2 \n";
+            levels.front().runs_list[i]->unmap();
+            i++;
+            min_key = (temp / 4)*i;
+            max_key = (temp/ 4)*(i + 1) - 1;
+            // if(i==3) max_key++;
+            if (levels.front().runs_list[i] == NULL)
+            {
+               // cout << "part3 \n";
+                Run* tmp = new Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
+                //cout << "part3.5 \n";
+                levels.front().runs_list[i] = tmp;
+            }
+           // cout << "part4 \n";
+            levels.front().runs_list[i]->map_write();
+            //cout << "part5 \n";
+            //cout << buffer.entries.begin()->key << endl;
         }
 
-        if (levels.front().runs_list[i] == NULL)
-        {
-            Run tmp = Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
-            levels.front().runs_list[i] = &tmp;
-        }
-        levels.front().runs_list[i]->map_write();
         levels.front().runs_list[i]->put(entry);
-           
-        levels.front().runs.front().unmap();
+        loop++;
     }
-
-
+    levels.front().runs_list[i]->unmap();
+    cout << "part1 \n";
+    //cout << buffer.entries.begin()->key << endl;
     /*
     levels.front().runs.emplace_front(levels.front().max_run_size, bf_bits_per_entry);
     levels.front().runs.front().map_write();
@@ -301,8 +302,12 @@ void LSMTree::put(KEY_t key, VAL_t val) {
      * Empty the buffer and insert the key/value pair
      */
 
+    //cout << buffer.entries.end() << "\n";
+
     buffer.empty();
+    cout << "part2 \n";
     assert(buffer.put(key, val));
+    cout << "part3 \n";
 }
 
 Run * LSMTree::get_run(int index) {
