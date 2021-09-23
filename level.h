@@ -6,8 +6,8 @@ class Level {
 public:
     int max_runs;
     long max_run_size;
-    Run** runs_list;
-    std::deque<Run> runs;
+    Run** runs_list;                         // next level
+    std::deque<Run> runs;               // current level
     Level(int n, long s) : max_runs(n), max_run_size(s) 
     {
        runs_list = new Run* [n];

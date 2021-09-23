@@ -31,6 +31,7 @@ public:
     void range(KEY_t, KEY_t);
     void del(KEY_t);
     void load(std::string);
+    void print_tree();
 };
 
 KEY_t make_key(float x, float y);

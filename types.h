@@ -3,11 +3,11 @@
 #include <stdint.h>
 
 typedef uint32_t KEY_t;
-typedef struct VAL_t  //struct로 변경
+struct VAL_t  //struct로 변경
 {
     float x;
     float y; 
-}VAL_t;
+};
 
 #define KEY_MAX 2147483647
 #define KEY_MIN -2147483648
