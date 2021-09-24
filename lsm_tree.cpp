@@ -232,12 +232,10 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     /*
      * Try inserting the key into the buffer
      */
-
     if (buffer.put(key, val)) {
         return;
     }
 
-    //cout << key << "\n";
     /*
      * If the buffer is full, flush level 0 if necessary
      * to create space
@@ -255,20 +253,22 @@ void LSMTree::put(KEY_t key, VAL_t val) {
 
     if (levels.front().runs_list[i] == NULL)
     {        
+        /*
         Run tmp = Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
         levels.front().runs_list[i] = &tmp;
-        
+        */
+        Run* tmp1 = new Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
+        levels.front().runs_list[i] = tmp1;
     }
 
     levels.front().runs_list[i]->map_write();
 
     for (const auto& entry : buffer.entries) 
     {
-        cout << "partA \n";
-        cout <<i<<" "<<entry.val.x<<" "<<entry.val.y<<" "<<entry.key<<" "<< loop << "\n";
+        cout << i << " " << entry.val.x << " " << entry.val.y << " " << entry.key << " " << loop;
+        cout << buffer.entries.begin()->key << " "<<buffer.entries.end()->key<<endl;
         if (entry.key > max_key)
         {
-            cout << "partB-1 \n";
             levels.front().runs_list[i]->unmap();
             i++;
             min_key = (temp / 4) * i;
@@ -276,14 +276,10 @@ void LSMTree::put(KEY_t key, VAL_t val) {
             // if(i==3) max_key++;
             if (levels.front().runs_list[i] == NULL)
             {
-                cout << "partC \n";
                 Run* tmp1 = new Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
-                cout << "partC-2 \n";
                 levels.front().runs_list[i] = tmp1;
             }
-            cout << "partD \n";
             levels.front().runs_list[i]->map_write();
-            cout << "partE \n";
         }
         /*
         entry_t tmp;
@@ -291,50 +287,23 @@ void LSMTree::put(KEY_t key, VAL_t val) {
         levels.front().runs_list[i]->put(tmp);
         */
 
-        cout << "partB-2 \n";
         levels.front().runs_list[i]->put(entry);
-        cout << "partB-3 \n";
 
-        if (buffer.entries.empty()) {
-            cout << "partB-4 \n";
-        }
-        else {
-            cout << "partB-5 \n";
-            cout << buffer.entries.size() << endl;
-
-            cout << buffer.entries << endl;
-            buffer.entries.clear();
-        }
-
-        //buffer.entries.erase(entry);
-        cout << "partB-4 \n";
         loop++;
     }
 
-    cout << "part1 \n";
     levels.front().runs_list[i]->unmap();
+
     cout << buffer.entries.size() << endl;
-    cout << "part2 \n";
-    /*
-    levels.front().runs.emplace_front(levels.front().max_run_size, bf_bits_per_entry);
-    levels.front().runs.front().map_write();
+    cout << buffer.entries.begin()->key << endl;
+    cout << "part1 \n";
 
-    for (const auto& entry : buffer.entries) {
-        levels.front().runs.front().put(entry);
-    }
+    buffer.empty();
+    cout << buffer.entries.size() << endl;
 
-    levels.front().runs.front().unmap();
-    */
-    /*
-     * Empty the buffer and insert the key/value pair
-     */
-
-    //cout << buffer.entries.end() << "\n";
     cout << "part2 \n";
     
-    //buffer.empty();
-    //buffer.entries.erase(buffer.entries.lower_bound((const KEY_t)0), buffer.entries.upper_bound((const KEY_t)temp));
-    //cout << buffer.entries.size() << endl;
+
     assert(buffer.put(key, val));
     cout << "part3 \n";
 }
@@ -550,7 +519,7 @@ KEY_t make_key(float x, float y)
         //show(temp);
         //printf("%d %d %d \n", i, temp, key);
     }
-    show(key);
+    //show(key);
 
     return key;
 }
