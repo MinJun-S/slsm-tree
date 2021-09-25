@@ -161,12 +161,15 @@ vector<entry_t> * Run::range(KEY_t start, KEY_t end) {
 
 void Run::put(entry_t entry) {
     assert(size < max_size);
+    // cout << "part4 \n";
 
     bloom_filter.set(entry.key);
+    // cout << "part4 \n";
 
     if (size % getpagesize() == 0) {
         fence_pointers.push_back(entry.key);
     }
+           // cout << "part4 \n";
 
     // Set a final fence pointer to establish an upper
     // bound on the last page range.

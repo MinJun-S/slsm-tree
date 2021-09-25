@@ -11,7 +11,7 @@ void command_loop(LSMTree& tree) {
     KEY_t key_a, key_b;
     VAL_t val;
     string file_path;
-
+    int i = 0;
     while (cin >> command) {
         switch (command) {
         case 'p':
@@ -42,6 +42,37 @@ void command_loop(LSMTree& tree) {
             getline(cin, file_path);
             // Trim quotes
             tree.load(file_path.substr(1, file_path.size() - 2));
+            break;
+        case 't':
+            tree.print_tree();
+            break;
+        case 'f':
+            char op; float x, y;
+            FILE * file; 
+            file = fopen("input.txt", "rt");
+            
+            while (fscanf(file, "%c %f %f", &op, &x, &y)!=EOF)
+            {
+                //val.x = x; val.y = y;
+                //tree.put(make_key(x, y), val);
+                //cout << x<<"  "<< y << endl;
+                cout << i++ << endl;
+            }
+            /*
+            if (file == NULL)
+            {
+                cout << "asfadasdfadsfasdfass" << endl;
+            }
+            else
+            {
+                while (!feof(file)) 
+                {
+                    fscanf(file, "%c %f %f", &op, &x, &y);
+                    cout << i++ << endl;
+                }
+            }
+            */
+            fclose(file);
             break;
         default:
             die("Invalid command.");
