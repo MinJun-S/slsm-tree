@@ -9,8 +9,8 @@ struct VAL_t  //struct로 변경
     float y; 
 };
 
-#define KEY_MAX 2147483647
-#define KEY_MIN -2147483648
+#define KEY_MAX 4294967295  
+#define KEY_MIN 0
 
 #define VAL_MAX 2147483647
 #define VAL_MIN -2147483647
@@ -25,7 +25,7 @@ struct entry {
     KEY_t key;
     VAL_t val;
     bool operator==(const entry& other) const {return key == other.key;}
-    bool operator<(const entry& other) const {return key < other.key;}
+    bool operator<(const entry& other) const {return key < other.key;}   //나중에 중복 key도 모두 출력할 수 있도록 수정 
     bool operator>(const entry& other) const {return key > other.key;}
 };
 

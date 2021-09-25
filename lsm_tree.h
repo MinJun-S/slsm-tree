@@ -22,7 +22,7 @@ class LSMTree {
     WorkerPool worker_pool;
     float bf_bits_per_entry;
     vector<Level> levels;
-    Run * get_run(int);
+    Run * get_run(int, int);
     void merge_down(vector<Level>::iterator, int);
 public:
     LSMTree(int, int, int, int, float);

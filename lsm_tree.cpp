@@ -246,7 +246,7 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     /*
      * Flush the buffer to level 0
      */
-    int i = 0; KEY_t temp = 4294967295;                  // 'i' is a run index of levels
+    int i = 0; KEY_t temp = KEY_MAX;                  // 'i' is a run index of levels
     min_key = 0;
     max_key = temp / 4 - 1;
     int loop = 0;
@@ -308,13 +308,10 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     cout << "part3 \n";
 }
 
-Run * LSMTree::get_run(int index) {
-    for (const auto& level : levels) {
-        if (index < level.runs.size()) {
-            return (Run *) &level.runs[index];
-        } else {
-            index -= level.runs.size();
-        }
+Run * LSMTree::get_run(int level, int index) {
+    if (levels[level].runs_list[index] != NULL)
+    {
+        return levels[level].runs_list[index];
     }
 
     return nullptr;
@@ -323,7 +320,7 @@ Run * LSMTree::get_run(int index) {
 void LSMTree::get(KEY_t key) {
     VAL_t *buffer_val;
     VAL_t latest_val;
-    int latest_run;
+    int latest_level;
     SpinLock lock;
     atomic<int> counter;
 
@@ -334,27 +331,35 @@ void LSMTree::get(KEY_t key) {
     buffer_val = buffer.get(key);
 
     if (buffer_val != nullptr) {
-        if (buffer_val->x != VAL_TOMBSTONE || buffer_val->y != VAL_TOMBSTONE) cout << buffer_val->x<<", "<<buffer_val->y; //val °ª ¼öÁ¤
+        if (buffer_val->x != VAL_TOMBSTONE || buffer_val->y != VAL_TOMBSTONE) 
+            cout << buffer_val->x<<", "<<buffer_val->y; //val °ª ¼öÁ¤
         cout << endl;
         delete buffer_val;
         return;
     }
 
     /*
+    버퍼 -> level 1
+    */
+    KEY_t div_num = 1073741824;
+    int index = key / div_num;
+    
+    
+    /*
      * Search runs
      */
 
     counter = 0;
-    latest_run = -1;
+    latest_level = -1;
 
     worker_task search = [&] {
-        int current_run;
+        int current_level;
         Run *run;
         VAL_t *current_val;
 
-        current_run = counter++;
+        current_level = counter++;  //div_num 변환, index 업데이트 추가 필요
 
-        if (latest_run >= 0 || (run = get_run(current_run)) == nullptr) {
+        if (latest_level >= 0 || (run = get_run(current_level,index)) == nullptr) {
             // Stop search if we discovered a key in another run, or
             // if there are no more runs to search
             return;
@@ -362,17 +367,15 @@ void LSMTree::get(KEY_t key) {
             // Couldn't find the key in the current run, so we need
             // to keep searching.
             search();
-        } else {
+        } else {  //나중에 중복되는 애들 다 출력해주기위해서 수정할것 
             // Update val if the run is more recent than the
             // last, then stop searching since there's no need
             // to search later runs.
             lock.lock();
-
-            if (latest_run < 0 || current_run < latest_run) {
-                latest_run = current_run;
-                latest_val = *current_val;
-            }
-
+       
+             latest_level = current_level;
+             latest_val = *current_val;
+            
             lock.unlock();
             delete current_val;
         }
@@ -381,7 +384,8 @@ void LSMTree::get(KEY_t key) {
     worker_pool.launch(search);
     worker_pool.wait_all();
 
-    if (latest_run >= 0 && latest_val.x != VAL_TOMBSTONE && latest_val.y != VAL_TOMBSTONE) cout << latest_val.x <<", "<<latest_val.y;
+    if (latest_level >= 0 && latest_val.x != VAL_TOMBSTONE && latest_val.y != VAL_TOMBSTONE)  ///나중에 범위 안에 있는지 체크로 수정
+        cout << latest_val.x <<", "<<latest_val.y;
     cout << endl;
 }
 
@@ -419,6 +423,7 @@ void LSMTree::range(KEY_t start, KEY_t end) {
 
         current_run = counter++;
 
+        /*
         if ((run = get_run(current_run)) != nullptr) {
             lock.lock();
             ranges.insert({current_run + 1, run->range(start, end)});
@@ -427,6 +432,7 @@ void LSMTree::range(KEY_t start, KEY_t end) {
             // Potentially more runs to search.
             search();
         }
+        */
     };
 
     worker_pool.launch(search);
