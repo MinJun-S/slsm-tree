@@ -63,6 +63,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     KEY_t min_key;
   
     assert(current >= levels.begin());
+    cout << "step0_assert" << endl;
 
     if (current->runs_list[idx]->remaining() > 0) {
         return;
@@ -78,7 +79,6 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
      * if the next level does not have space for the current level,
      * recursively merge the next level downwards to create some
      */
-
     if (current->runs_list[idx]->idx_level < 3) {
         for (int i = 4 * idx; i < 4 * idx + 4; i++) {
             if (next->runs_list[i]->remaining() <= 0) {
@@ -99,9 +99,11 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
      * Merge all runs in the current level into the first
      * run in the next level
      */
+    cout << "step2" << endl;
 
     merge_ctx.add(current->runs_list[idx]->map_read(), current->runs_list[idx]->size);
 
+    cout << "step3" << endl;
     // run ÁöÁ¤ºÎºÐ¿¡ Ãß°¡
     if (current->runs_list[idx]->idx_level < 3) {
         for (int i = idx * 4; i <= idx * 4 + 3; i++) {
@@ -112,11 +114,11 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
                 temp = 4294967295 / pow(4, distance(levels.begin(), next));
                 max_key = temp * (i + 1);
                 min_key = temp * i;
-
-                Run tmp = Run(next->max_run_size, bf_bits_per_entry, max_key, min_key);
-                next->runs_list[i] = &tmp;
+                
+                Run* tmp = new Run(next->max_run_size, bf_bits_per_entry, max_key, min_key);
+                next->runs_list[i] = tmp;
                 next->runs_list[i]->map_write();
-
+              
                 //next.runs_list[i](next->max_run_size, bf_bits_per_entry, max_key, min_key);
                 //next.runs_list[i].map_write();
             }
@@ -165,67 +167,6 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     delete current->runs_list[idx];
 }
 
-//void lsmtree::merge_down(vector<level>::iterator current) {
-//    vector<level>::iterator next;
-//    mergecontext merge_ctx;
-//    entry_t entry;
-//
-//    assert(current >= levels.begin());
-//
-//    if (current->remaining() > 0) {
-//        return;
-//    } else if (current >= levels.end() - 1) {
-//        die("no more space in tree.");
-//    } else {
-//        next = current + 1;
-//    }
-//
-//    /*
-//     * if the next level does not have space for the current level,
-//     * recursively merge the next level downwards to create some
-//     */
-//
-//    if (next->remaining() == 0) {
-//        merge_down(next);
-//        assert(next->remaining() > 0);
-//    }
-//
-//    /*
-//     * merge all runs in the current level into the first
-//     * run in the next level
-//     */
-//
-//    for (auto& run : current->runs) {
-//        merge_ctx.add(run.map_read(), run.size);
-//    }
-//
-//    next->runs.emplace_front(next->max_run_size, bf_bits_per_entry);
-//    next->runs.front().map_write();
-//
-//    while (!merge_ctx.done()) {
-//        entry = merge_ctx.next();
-//
-//        // remove deleted keys from the final level
-//        if (!(next == levels.end() - 1 && (entry.val.y == val_tombstone|| entry.val.x )))
-//        {
-//            next->runs.front().put(entry);
-//        }
-//    }
-//
-//    next->runs.front().unmap();
-//
-//    for (auto& run : current->runs) {
-//        run.unmap();
-//    }
-//
-//    /*
-//     * clear the current level to delete the old (now
-//     * redundant) entry files.
-//     */
-//
-//    current->runs.clear();
-//}
-
 void LSMTree::put(KEY_t key, VAL_t val) {
     KEY_t max_key;
     KEY_t min_key;
@@ -236,12 +177,21 @@ void LSMTree::put(KEY_t key, VAL_t val) {
         return;
     }
 
+    for (int i = 0; i < 4; i++) {
+        Run* tmp1 = new Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
+        levels.front().runs_list[i] = tmp1;
+    }
+
     /*
      * If the buffer is full, flush level 0 if necessary
      * to create space
      */
-
-    //merge_down(levels.begin(), 0);
+  
+    for (int i = 0; i < 4; i++) {
+        if (levels.front().runs_list[i] != NULL) {
+            merge_down(levels.begin(), i);
+        }
+    }
 
     /*
      * Flush the buffer to level 0
