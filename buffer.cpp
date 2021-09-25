@@ -48,10 +48,12 @@ bool Buffer::put(KEY_t key, VAL_t val) {
         tie(it, found) = entries.insert(entry);
 
         // Update the entry if it already exists
+        /*
         if (found == false) {
             entries.erase(it);
             entries.insert(entry);
         }
+        */
 
         return true;
     }
