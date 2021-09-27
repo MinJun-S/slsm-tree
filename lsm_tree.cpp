@@ -46,6 +46,20 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
         levels.emplace_back(fanout, max_run_size);
 
     }
+
+
+
+    KEY_t temp = KEY_MAX;                  // 'i' is a run index of levels
+    KEY_t min_key = 0;
+    KEY_t max_key = temp / 4 - 1;
+    int loop = 0;
+    for (int i = 0; i < 4; i++) 
+    {
+        min_key = (temp / 4) * i;
+        max_key = (temp / 4) * (i + 1) - 1;
+        Run* tmp1 = new Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
+        levels.front().runs_list[i] = tmp1;
+    }
 }
 
 // run input
@@ -177,11 +191,6 @@ void LSMTree::put(KEY_t key, VAL_t val) {
         return;
     }
 
-    for (int i = 0; i < 4; i++) {
-        Run* tmp1 = new Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
-        levels.front().runs_list[i] = tmp1;
-    }
-
     /*
      * If the buffer is full, flush level 0 if necessary
      * to create space
@@ -201,15 +210,6 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     max_key = temp / 4 - 1;
     int loop = 0;
 
-    if (levels.front().runs_list[i] == NULL)
-    {        
-        /*
-        Run tmp = Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
-        levels.front().runs_list[i] = &tmp;
-        */
-        Run* tmp1 = new Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
-        levels.front().runs_list[i] = tmp1;
-    }
 
     levels.front().runs_list[i]->map_write();
 
@@ -224,11 +224,6 @@ void LSMTree::put(KEY_t key, VAL_t val) {
             min_key = (temp / 4) * i;
             max_key = (temp/ 4) * (i + 1) - 1;
             // if(i==3) max_key++;
-            if (levels.front().runs_list[i] == NULL)
-            {
-                Run* tmp1 = new Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
-                levels.front().runs_list[i] = tmp1;
-            }
             levels.front().runs_list[i]->map_write();
         }
         /*
@@ -244,18 +239,10 @@ void LSMTree::put(KEY_t key, VAL_t val) {
 
     levels.front().runs_list[i]->unmap();
 
-    cout << buffer.entries.size() << endl;
-    cout << buffer.entries.begin()->key << endl;
-    cout << "part1 \n";
 
     buffer.empty();
     cout << buffer.entries.size() << endl;
-
-    cout << "part2 \n";
-    
-
     assert(buffer.put(key, val));
-    cout << "part3 \n";
 }
 
 Run * LSMTree::get_run(int level, int index) {
