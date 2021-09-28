@@ -9,8 +9,8 @@ struct VAL_t  //struct·Î º¯°æ
     float y; 
 };
 
-#define KEY_MAX 2147483647
-#define KEY_MIN -2147483648
+#define KEY_MAX 4294967295
+#define KEY_MIN 0
 
 #define VAL_MAX 2147483647
 #define VAL_MIN -2147483647

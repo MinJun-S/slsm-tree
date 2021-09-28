@@ -11,19 +11,22 @@
 
 using namespace std;
 
-Run::Run(long max_size, float bf_bits_per_entry, KEY_t max_key, KEY_t min_key) :
+Run::Run(long max_size, float bf_bits_per_entry, KEY_t max_key, KEY_t min_key, int idx_level) :
          max_size(max_size),
          bloom_filter(max_size * bf_bits_per_entry),
          max_key(max_key),
-         min_key(min_key)
+         min_key(min_key),
+         idx_level(idx_level)
 {
     char *tmp_fn;
 
     size = 0;
     fence_pointers.reserve(max_size / getpagesize());
-
+    
     tmp_fn = strdup(TMP_FILE_PATTERN);
     tmp_file = mkstemp(tmp_fn);
+    
+
 
     mapping = nullptr;
     mapping_fd = -1;
@@ -49,7 +52,7 @@ entry_t * Run::map_read(size_t len, off_t offset) {
 }
 
 entry_t * Run::map_read(void) {
-    map_read(max_size * sizeof(entry_t), 0);
+    map_read(max_size * sizeof(entry_t) * 2, 0);
     return mapping;
 }
 
@@ -57,7 +60,7 @@ entry_t * Run::map_write(void) {
     assert(mapping == nullptr);
     int result;
 
-    mapping_length = max_size * sizeof(entry_t);
+    mapping_length = max_size * sizeof(entry_t) * 2;
 
     mapping_fd = open(tmp_file.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0600);
     assert(mapping_fd != -1);
@@ -160,7 +163,7 @@ vector<entry_t> * Run::range(KEY_t start, KEY_t end) {
 }
 
 void Run::put(entry_t entry) {
-    assert(size < max_size);
+    //assert(size < max_size);
     // cout << "part4 \n";
 
     bloom_filter.set(entry.key);

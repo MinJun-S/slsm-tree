@@ -53,11 +53,12 @@ void command_loop(LSMTree& tree) {
             
             while (fscanf(file, "%c %f %f", &op, &x, &y)!=EOF)
             {
-                //val.x = x; val.y = y;
-                //tree.put(make_key(x, y), val);
+                val.x = x; val.y = y;
+                tree.put(make_key(x, y), val);
                 //cout << x<<"  "<< y << endl;
-                cout << i++ << endl;
+                i++;
             }
+            cout << i << endl;
             /*
             if (file == NULL)
             {

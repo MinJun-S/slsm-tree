@@ -32,6 +32,8 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
                  buffer(buffer_max_entries),
                  worker_pool(num_threads)
 {
+    KEY_t max_key;
+    KEY_t min_key;
     long max_run_size;
 
     max_run_size = buffer_max_entries;
@@ -44,7 +46,14 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
             max_run_size *= 2;
         }
         levels.emplace_back(fanout, max_run_size);
+    }
 
+    min_key = 0;
+    max_key = KEY_MAX / 4 - 1;
+
+    for (int i = 0; i < 4; i++) {
+        Run* tmp1 = new Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key, 1);
+        levels.front().runs_list[i] = tmp1;
     }
 }
 
@@ -79,29 +88,6 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     }
 
     /*
-     * if the next level does not have space for the current level,
-     * recursively merge the next level downwards to create some
-     */
-
-    cout << "step1" << endl;
-
-    if (current->runs_list[idx]->idx_level < 3) {
-        for (int i = 4 * idx; i < 4 * idx + 4; i++) {
-            if (next->runs_list[i]->remaining() <= 0) {
-                merge_down(next, i);
-                assert(next->runs_list[i]->remaining() > 0);
-            }
-
-        }
-    }
-    else {
-        if (next->runs_list[idx]->remaining() <= 0) {
-            merge_down(next, idx);
-            assert(next->runs_list[idx]->remaining() > 0);
-        }
-    }
-
-    /*
      * Merge all runs in the current level into the first
      * run in the next level
      */
@@ -111,6 +97,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
 
     cout << "step3" << endl;
     // run ÁöÁ¤ºÎºÐ¿¡ Ãß°¡
+    int level_temp = current->runs_list[idx]->idx_level + 1;
     if (current->runs_list[idx]->idx_level < 3) {
         for (int i = idx * 4; i <= idx * 4 + 3; i++) {
             if (next->runs_list[i] != NULL) {
@@ -121,7 +108,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
                 max_key = temp * (i + 1);
                 min_key = temp * i;
                 
-                Run* tmp = new Run(next->max_run_size, bf_bits_per_entry, max_key, min_key);
+                Run* tmp = new Run(next->max_run_size, bf_bits_per_entry, max_key, min_key, level_temp);
                 next->runs_list[i] = tmp;
                 next->runs_list[i]->map_write();
 
@@ -146,11 +133,11 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
             merge_temp.add(next->runs_list[idx]->map_read(), current->runs_list[idx]->size);
         }
         else {
-            max_key = current->runs_list[idx]->max_key;
-            min_key = current->runs_list[idx]->min_key;
+            KEY_t max_key = current->runs_list[idx]->max_key;
+            KEY_t min_key = current->runs_list[idx]->min_key;
 
-            Run tmp = Run(next->max_run_size, bf_bits_per_entry, max_key, min_key);
-            next->runs_list[idx] = &tmp;
+            Run* tmp = new Run(next->max_run_size, bf_bits_per_entry, max_key, min_key, level_temp);
+            next->runs_list[idx] = tmp;
             next->runs_list[idx]->map_write();
         }
         while (!merge_ctx.done()) {
@@ -167,12 +154,39 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     current->runs_list[idx]->unmap();
 
     /*
+     * if the next level does not have space for the current level,
+     * recursively merge the next level downwards to create some
+     */
+
+    cout << "step1" << endl;
+
+    if (current->runs_list[idx]->idx_level < 3) {
+        for (int i = 4 * idx; i < 4 * idx + 4; i++) {
+            if (next->runs_list[i]->remaining() <= 0) {
+                merge_down(next, i);
+                assert(next->runs_list[i]->remaining() > 0);
+            }
+        }
+    }
+    else {
+        if (next->runs_list[idx]->remaining() <= 0) {
+            merge_down(next, idx);
+            assert(next->runs_list[idx]->remaining() > 0);
+        }
+    }
+
+    /*
      * Clear the current level to delete the old (now
      * redundant) entry files.
      */
+    KEY_t min_temp = current->runs_list[idx]->min_key;
+    KEY_t max_temp = current->runs_list[idx]->max_key;
+    Run* tmp = new Run(current->max_run_size, bf_bits_per_entry, max_temp, min_temp, level_temp - 1);
 
     delete current->runs_list[idx];
     cout << "step5" << endl;
+    current->runs_list[idx] = tmp;
+    cout << "step6" << endl;
 }
 
 void LSMTree::put(KEY_t key, VAL_t val) {
@@ -183,11 +197,6 @@ void LSMTree::put(KEY_t key, VAL_t val) {
      */
     if (buffer.put(key, val)) {
         return;
-    }
-
-    for (int i = 0; i < 4; i++) {
-        Run* tmp1 = new Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
-        levels.front().runs_list[i] = tmp1;
     }
 
     /*
@@ -211,34 +220,20 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     max_key = temp / 4 - 1;
     int loop = 0;
 
-    if (levels.front().runs_list[i] == NULL)
-    {        
-        /*
-        Run tmp = Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
-        levels.front().runs_list[i] = &tmp;
-        */
-        Run* tmp1 = new Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
-        levels.front().runs_list[i] = tmp1;
-    }
-
     levels.front().runs_list[i]->map_write();
 
     for (const auto& entry : buffer.entries) 
     {
-        cout << i << " " << entry.val.x << " " << entry.val.y << " " << entry.key << " " << loop;
-        cout << buffer.entries.begin()->key << " "<<buffer.entries.end()->key<<endl;
+        //cout << i << " " << entry.val.x << " " << entry.val.y << " " << entry.key << " " << loop;
+        //cout << buffer.entries.begin()->key << " "<<buffer.entries.end()->key<<endl;
         if (entry.key > max_key)
         {
+
             levels.front().runs_list[i]->unmap();
             i++;
             min_key = (temp / 4) * i;
             max_key = (temp/ 4) * (i + 1) - 1;
             // if(i==3) max_key++;
-            if (levels.front().runs_list[i] == NULL)
-            {
-                Run* tmp1 = new Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key);
-                levels.front().runs_list[i] = tmp1;
-            }
             levels.front().runs_list[i]->map_write();
         }
         /*
@@ -251,6 +246,7 @@ void LSMTree::put(KEY_t key, VAL_t val) {
 
         loop++;
     }
+
 
     levels.front().runs_list[i]->unmap();
 

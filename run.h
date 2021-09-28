@@ -17,7 +17,7 @@ class Run {
     entry_t *mapping;
     size_t mapping_length;
     int mapping_fd;
-    long file_size() {return max_size * sizeof(entry_t);}
+    long file_size() { return max_size * sizeof(entry_t) * 2; }
     //vector<int> spatial_filter;
 
 public:
@@ -26,7 +26,7 @@ public:
     string tmp_file;
     KEY_t max_key;
     KEY_t min_key;
-    Run(long, float, KEY_t, KEY_t);
+    Run(long, float, KEY_t, KEY_t, int);
     ~Run(void);
     entry_t * map_read(size_t, off_t);
     entry_t * map_read(void);
