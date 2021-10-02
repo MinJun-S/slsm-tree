@@ -11,14 +11,15 @@ void command_loop(LSMTree& tree) {
     KEY_t key_a, key_b;
     VAL_t val;
     string file_path;
-
+    int i = 0;
     while (cin >> command) {
         switch (command) {
         case 'p':
             cin >> val.x>>val.y;
 
-            if (val.x < VAL_MIN || val.x > VAL_MAX || val.y < VAL_MIN || val.y > VAL_MAX){
-                die("Could not insert value " + to_string(val.x) + to_string(val.y)+ ": out of range.");
+            if (val.x < VAL_MIN_X || val.x > VAL_MAX_X || val.y < VAL_MIN_Y || val.y > VAL_MAX_Y){
+                //die("Could not insert value " + to_string(val.x) + to_string(val.y)+ ": out of range.");
+                cout<<"Could not insert value " + to_string(val.x) +", " + to_string(val.y) + ": out of range.\n";
             } else {
                 tree.put(make_key(val.x,val.y), val);
             }
@@ -41,6 +42,41 @@ void command_loop(LSMTree& tree) {
             getline(cin, file_path);
             // Trim quotes
             tree.load(file_path.substr(1, file_path.size() - 2));
+            break;
+        case 't':
+            tree.print_tree();
+            break;
+        case 'f':
+            char op; float x, y;
+            FILE * file; 
+            file = fopen("input.txt", "rt");
+            
+            while (fscanf(file, "%c %f %f", &op, &x, &y)!=EOF)
+            {
+                val.x = x; val.y = y;
+                tree.put(make_key(x, y), val);
+                //cout << x<<"  "<< y << endl;
+                i++;
+            }
+            cout << i << endl;
+            /*
+            if (file == NULL)
+            {
+                cout << "asfadasdfadsfasdfass" << endl;
+            }
+            else
+            {
+                while (!feof(file)) 
+                {
+                    fscanf(file, "%c %f %f", &op, &x, &y);
+                    cout << i++ << endl;
+                }
+            }
+            */
+            fclose(file);
+            break;
+        case 's':
+            tree.save_run();
             break;
         default:
             die("Invalid command.");
@@ -88,6 +124,7 @@ int main(int argc, char *argv[]) {
 
     buffer_max_entries = buffer_num_pages * getpagesize() / sizeof(entry_t);
     //printf("%d", buffer_max_entries);
+
     LSMTree tree(buffer_max_entries, depth, fanout, num_threads, bf_bits_per_entry);
     command_loop(tree);
 

@@ -3,18 +3,23 @@
 #include <stdint.h>
 
 typedef uint32_t KEY_t;
-typedef struct VAL_t  //struct로 변경
+struct VAL_t  //struct로 변경
 {
     float x;
     float y; 
-}VAL_t;
+};
 
-#define KEY_MAX 2147483647
-#define KEY_MIN -2147483648
+#define KEY_MAX 4294967295
+#define KEY_MIN 0
 
 #define VAL_MAX 2147483647
 #define VAL_MIN -2147483647
 #define VAL_TOMBSTONE -2147483648
+
+#define VAL_MAX_X 131.87222222 
+#define VAL_MIN_X 125.06666667
+#define VAL_MAX_Y 38.45000000
+#define VAL_MIN_Y 33.10000000
 
 struct entry {
     KEY_t key;

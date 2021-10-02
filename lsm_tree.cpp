@@ -3,6 +3,7 @@
 #include <iostream>
 #include <map>
 #include <cmath>
+#include <string>
 
 #include "lsm_tree.h"
 #include "merge.h"
@@ -32,113 +33,212 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
                  buffer(buffer_max_entries),
                  worker_pool(num_threads)
 {
+    KEY_t max_key;
+    KEY_t min_key;
     long max_run_size;
 
     max_run_size = buffer_max_entries;
 
     while ((depth--) > 0) {
-        fanout *= 4;
+        if (fanout < 64) {
+            fanout *= 4;
+        }
+        else {
+            max_run_size *= 2;
+        }
         levels.emplace_back(fanout, max_run_size);
-        max_run_size *= fanout; //¾Ë¾Æ¼­¼³Á¤
+    }
+
+    min_key = 0;
+    max_key = KEY_MAX / 4 - 1;
+
+    for (int i = 0; i < 4; i++) {
+        Run* tmp1 = new Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key, 1);
+        levels.front().runs_list[i] = tmp1;
     }
 }
 
-void LSMTree::merge_down(Run &current_run) {	
-	
-	//ÀÌ°Ô¸Â³ª
-	Run next_runs_list[levels->max_runs] = levels->runs_list;
 
-    //vector<Level>::iterator next;
+void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
+    vector<Level>::iterator next;
+    Run** runs_list;
     MergeContext merge_ctx;
-    entry_t entry;	
+    entry_t entry;
 
-    assert(current_run >= levels.begin());
+    KEY_t temp;
 
-    if (current_run->remaining() > 0) {
+    KEY_t max_key;
+    KEY_t min_key;
+  
+    assert(current >= levels.begin());
+    cout << "step0_assert" << endl;
+
+    if (current->runs_list[idx]->remaining() > 0) {
+        cout << "if_0" << endl;
         return;
-    } else if (current_run >= levels.end() - 1) {
-        die("No more space of run in tree.");
-    } else {
-        //next = current + 1; //-> level°³³ä¿¡¼­ Á¢±ÙÇÏ´Â°Çµ¥ ¾îÄÉ ¼öÁ¤ÇØ¾ß??
     }
-
-    /*
-     * If the next level does not have space for the current level,
-     * recursively merge the next level downwards to create some
-     */
-	for (int i = 0; i < 4; i++) {
-		if (next_runs_list[i]->remaining() == 0) {
-			merge_down(next_runs_list[i]);
-			assert(next_runs_list[i]->remaining() > 0);
-		}
-	}
-    
+    else if (current >= levels.end() - 1) {
+        cout << "if_1" << endl;
+        die("no more space in tree.");
+    }
+    else {
+        cout << "if_2"<< endl;
+        cout << "~~~~~~~~~~start merge down~~~~~~~~~~" << endl;
+        next = current + 1;
+    }
 
     /*
      * Merge all runs in the current level into the first
      * run in the next level
-
-	 <current_runÀ» 4ºĞÇÒÇØ¼­ next_runs_list[i]¿¡ merge>
      */
+    cout << "step2" << endl;
 
-    //for (auto& run : current->runs) {
-    //    merge_ctx.add(run.map_read(), run.size);
-    //}
-	/*
-	//¾ßÀÌ°É ¾îÄÉ...
-	for (int i = 0; i < 4; i++) {
-		next_runs_list[i].map_write();
+    merge_ctx.add(current->runs_list[idx]->map_read(), current->runs_list[idx]->size);
 
-		//current_run.map_read();  //°®°í¿Í¼­
-		//							4µîºĞ¿¡ ´ëÇØ while¹® µ¹¸®¸é?
+    cout << "step3" << endl;
 
-		while (!merge_ctx.done()) {
-			entry = merge_ctx.next();			
+    int level_temp = current->runs_list[idx]->idx_level + 1;
 
-			// Remove deleted keys from the final level
-			if (!(next == levels.end() - 1 && (entry.val.y == VAL_TOMBSTONE || entry.val.x)))
-			{
-				next->runs.front().put(entry);
-			}
-		}
+    string st_file_name;
+    char ch_file_name[100];
+    string input_data;
+    char ch_input_data[100];
 
-		next->runs.front().unmap();
+    if (current->runs_list[idx]->idx_level < 3) {
+        for (int i = idx * 4; i <= idx * 4 + 3; i++) {
 
-	}
-	*/
-    next->runs.emplace_front(next->max_run_size, bf_bits_per_entry);
-    next->runs.front().map_write();
+            if (next->runs_list[i] != NULL) {
+                merge_ctx.add(next->runs_list[i]->map_read(), next->runs_list[i]->size);
+                next->runs_list[i]->map_write();
+            }
+            else {
+                temp = 4294967295 / pow(4, distance(levels.begin(), next));
+                max_key = temp * (i + 1);
+                min_key = temp * i;
+                
+                Run* tmp = new Run(next->max_run_size, bf_bits_per_entry, max_key, min_key, level_temp);
+                next->runs_list[i] = tmp;
+                next->runs_list[i]->map_write();
+            }
+            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            // generate file
+            st_file_name = "runs_list/" + to_string(level_temp) + "_" + to_string(i) + ".txt";
+            cout << st_file_name << endl;
+            strcpy(ch_file_name, st_file_name.c_str());
+            FILE* fp = fopen(ch_file_name, "w"); //testíŒŒì¼ì„ w(ì“°ê¸°) ëª¨ë“œë¡œ ì—´ê¸°
+            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
 
-    while (!merge_ctx.done()) {
-        entry = merge_ctx.next();
 
-        // Remove deleted keys from the final level
-        if (!(next == levels.end() - 1 && (entry.val.y == VAL_TOMBSTONE|| entry.val.x )))
-        {
-            next->runs.front().put(entry);
+            while (!merge_ctx.done()) {
+                entry = merge_ctx.next();
+
+                // Remove deleted keys from the final level
+                if (entry.key <= next->runs_list[i]->max_key && entry.key > next->runs_list[i]->min_key)
+                {
+                    next->runs_list[i]->put(entry);
+                    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                    // input to txt file
+                    input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
+                    //cout << input_data << endl;
+                    strcpy(ch_input_data, input_data.c_str());
+                    fputs(ch_input_data, fp); //ë¬¸ìì—´ ì…ë ¥
+                    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                }
+                else break;
+            }
+
+            next->runs_list[i]->unmap();
+
+            fclose(fp);       //íŒŒì¼ í¬ì¸í„° ë‹«ê¸°//////////////////////////////////////////////////////////////////////<------------this 
         }
     }
+    else {
+        if (next->runs_list[idx] != NULL) {
+            merge_ctx.add(next->runs_list[idx]->map_read(), next->runs_list[idx]->size);
+            next->runs_list[idx]->map_write();
+        }
+        else {
+            KEY_t max_key = current->runs_list[idx]->max_key;
+            KEY_t min_key = current->runs_list[idx]->min_key;
 
-    next->runs.front().unmap();
+            Run* tmp = new Run(next->max_run_size, bf_bits_per_entry, max_key, min_key, level_temp);
+            next->runs_list[idx] = tmp;
+            next->runs_list[idx]->map_write();
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // generate file
+        st_file_name = "runs_list/" + to_string(level_temp) + "_" + to_string(idx) + ".txt";
+        cout << st_file_name << endl;
+        strcpy(ch_file_name, st_file_name.c_str());
+        FILE* fp = fopen(ch_file_name, "w"); //testíŒŒì¼ì„ w(ì“°ê¸°) ëª¨ë“œë¡œ ì—´ê¸°
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    //for (auto& run : current->runs) {
-    //    run.unmap();
-    //}
-	current_run.unmap();
+
+        while (!merge_ctx.done()) {
+            entry = merge_ctx.next();
+            next->runs_list[idx]->put(entry);
+            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            // input to txt file
+            input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
+            //cout << input_data << endl;
+            strcpy(ch_input_data, input_data.c_str());
+            fputs(ch_input_data, fp); //ë¬¸ìì—´ ì…ë ¥
+            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        }
+
+        next->runs_list[idx]->unmap();
+        fclose(fp);       //íŒŒì¼ í¬ì¸í„° ë‹«ê¸°//////////////////////////////////////////////////////////////////////<------------this 
+    }
+    cout << "step4" << endl;
+
+    //next->runs.emplace_front(next->max_run_size, bf_bits_per_entry);
+    //next->runs.front().map_write();
+
+    current->runs_list[idx]->unmap();
+
+    /*
+     * if the next level does not have space for the current level,
+     * recursively merge the next level downwards to create some
+     */
+
+    cout << "step1" << endl;
+
+    if (current->runs_list[idx]->idx_level < 3) {
+        for (int i = 4 * idx; i < 4 * idx + 4; i++) {
+            if (next->runs_list[i]->remaining() <= 0) {
+                merge_down(next, i);
+                assert(next->runs_list[i]->remaining() > 0);
+            }
+        }
+    }
+    else {
+        if (next->runs_list[idx]->remaining() <= 0) {
+            merge_down(next, idx);
+            assert(next->runs_list[idx]->remaining() > 0);
+        }
+    }
 
     /*
      * Clear the current level to delete the old (now
      * redundant) entry files.
      */
+    KEY_t min_temp = current->runs_list[idx]->min_key;
+    KEY_t max_temp = current->runs_list[idx]->max_key;
+    Run* tmp = new Run(current->max_run_size, bf_bits_per_entry, max_temp, min_temp, level_temp - 1);
 
-    current_run.clear();
+    delete current->runs_list[idx];
+
+    cout << "step5" << endl;
+    current->runs_list[idx] = tmp;
+    cout << "~~~~~~~~~~end merge down~~~~~~~~~~" << endl;
 }
 
 void LSMTree::put(KEY_t key, VAL_t val) {
+    KEY_t max_key;
+    KEY_t min_key;
     /*
      * Try inserting the key into the buffer
      */
-
     if (buffer.put(key, val)) {
         return;
     }
@@ -147,28 +247,94 @@ void LSMTree::put(KEY_t key, VAL_t val) {
      * If the buffer is full, flush level 0 if necessary
      * to create space
      */
+    cout << "step put1" << endl;
 
-    merge_down(levels.begin());
+    for (int i = 0; i < 4; i++) {
+        if (levels.front().runs_list[i] != NULL) {
+            merge_down(levels.begin(), i);
+        }
+    }
+    cout << "step put2" << endl;
 
     /*
      * Flush the buffer to level 0
      */
+    int i = 0; KEY_t temp = 4294967295;                  // 'i' is a run index of levels
+    min_key = 0;
+    max_key = temp / 4 - 1;
+    int loop = 0;
 
-    levels.front().runs.emplace_front(levels.front().max_run_size, bf_bits_per_entry);
-    levels.front().runs.front().map_write();
+    levels.front().runs_list[i]->map_write();
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // generate file    
+    string st_file_name;        
+    char ch_file_name[100];
+    st_file_name = "runs_list/" + to_string(levels.front().runs_list[i]->idx_level) + "_" + to_string(i) + ".txt";
+    cout << st_file_name << endl;
+    strcpy(ch_file_name, st_file_name.c_str());
+    FILE* fp = fopen(ch_file_name, "w"); //testíŒŒì¼ì„ w(ì“°ê¸°) ëª¨ë“œë¡œ ì—´ê¸°    
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    string input_data;
+    char ch_input_data[100];
 
-    for (const auto& entry : buffer.entries) {
-        levels.front().runs.front().put(entry);
+    for (const auto& entry : buffer.entries) 
+    {
+        //cout << i << " " << entry.val.x << " " << entry.val.y << " " << entry.key << " " << loop;
+        //cout << buffer.entries.begin()->key << " "<<buffer.entries.end()->key<<endl;
+        if (entry.key > max_key)
+        {
+            fclose(fp);       //íŒŒì¼ í¬ì¸í„° ë‹«ê¸°//////////////////////////////////////////////////////////////////////<------------this 
+
+            levels.front().runs_list[i]->unmap();
+            i++;
+            min_key = (temp / 4) * i;
+            max_key = (temp/ 4) * (i + 1) - 1;
+            // if(i==3) max_key++;
+            levels.front().runs_list[i]->map_write();
+
+            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            // generate file            
+            st_file_name = "runs_list/" + to_string(levels.front().runs_list[i]->idx_level) + "_" + to_string(i) + ".txt";
+            cout << st_file_name << endl;
+            strcpy(ch_file_name, st_file_name.c_str());
+            FILE* fp = fopen(ch_file_name, "w"); //testíŒŒì¼ì„ w(ì“°ê¸°) ëª¨ë“œë¡œ ì—´ê¸°            
+            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        }
+
+        /*
+        entry_t tmp;
+        tmp.key = entry.key; tmp.val = entry.val;
+        levels.front().runs_list[i]->put(tmp);
+        */
+
+        levels.front().runs_list[i]->put(entry);
+
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // input to txt file                
+        input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
+        //cout << input_data << endl;
+        strcpy(ch_input_data, input_data.c_str());
+        fputs(ch_input_data, fp); //ë¬¸ìì—´ ì…ë ¥        
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        loop++;
     }
 
-    levels.front().runs.front().unmap();
+    levels.front().runs_list[i]->unmap();
 
-    /*
-     * Empty the buffer and insert the key/value pair
-     */
+    fclose(fp);      //íŒŒì¼ í¬ì¸í„° ë‹«ê¸°/////////////////////////////////////////////////////<-------ì–˜ë„
+
+    cout << buffer.entries.size() << endl;
+    cout << buffer.entries.begin()->key << endl;
+    cout << "part1 \n";
 
     buffer.empty();
+    cout << buffer.entries.size() << endl;
+
+    cout << "part2 \n";
+    
     assert(buffer.put(key, val));
+    cout << "part3 \n";
 }
 
 Run * LSMTree::get_run(int index) {
@@ -197,7 +363,7 @@ void LSMTree::get(KEY_t key) {
     buffer_val = buffer.get(key);
 
     if (buffer_val != nullptr) {
-        if (buffer_val->x != VAL_TOMBSTONE || buffer_val->y != VAL_TOMBSTONE) cout << buffer_val->x<<", "<<buffer_val->y; //val °ª ¼öÁ¤
+        if (buffer_val->x != VAL_TOMBSTONE || buffer_val->y != VAL_TOMBSTONE) cout << buffer_val->x<<", "<<buffer_val->y; //val Â°Âª Â¼Ã¶ÃÂ¤
         cout << endl;
         delete buffer_val;
         return;
@@ -305,6 +471,7 @@ void LSMTree::range(KEY_t start, KEY_t end) {
 
     while (!merge_ctx.done()) {
         entry = merge_ctx.next();
+
         if (entry.val.x != VAL_TOMBSTONE && entry.val.y != VAL_TOMBSTONE) {
             cout << entry.key << ":" << entry.val.x<<", "<<entry.val.y;
             if (!merge_ctx.done()) cout << " ";
@@ -338,6 +505,7 @@ void LSMTree::load(string file_path) {
         while (stream >> entry) {
             put(entry.key, entry.val);
         }
+
     } else {
         die("Could not locate file '" + file_path + "'.");
     }
@@ -382,7 +550,95 @@ KEY_t make_key(float x, float y)
         //show(temp);
         //printf("%d %d %d \n", i, temp, key);
     }
-    show(key);
+    //show(key);
 
     return key;
+}
+
+void LSMTree::print_tree()
+{
+    int i = 0;
+    for (const auto& entry : buffer.entries)
+    {
+        cout << entry.val.x << " " << entry.val.y << " " << entry.key <<  "\n";
+        i++;
+    }
+    cout << "number of entry in Buffer = " << i << endl;
+
+}
+
+
+void LSMTree::save_run()
+{
+    cout << "NoNo~" << endl;
+
+    //cout << "start save" << endl;
+    //cout << levels.front().runs_list[1]->min_key << "  " << levels.front().runs_list[1]->max_key << endl;   // testìš©
+    ////cout << levels.front().runs_list[0]->mapping[0].val.x << endl;
+
+    //
+
+    ///* ë¶ˆëŸ¬ì˜¤ê¸° ì–´ì¼€ */
+    //for (int j = 1; j <= levels.size(); j++) {
+    //    for (int i = 0; i < 4; i++) {
+    //        if (levels[j].runs_list[i] != NULL) {
+
+
+    //            // generate file
+    //            string st_file_name = to_string(levels[j].runs_list[i]->idx_level) + "_" + to_string(i) + ".txt";
+    //            cout << "test1 : " <<st_file_name << endl; 
+
+    //            char ch_file_name[100];
+
+    //            strcpy(ch_file_name, st_file_name.c_str());
+    //            FILE* fp = fopen(ch_file_name, "w"); //testíŒŒì¼ì„ w(ì“°ê¸°) ëª¨ë“œë¡œ ì—´ê¸°
+
+    //            cout << "test2 " << endl;
+
+    //            // input to txt file
+    //            string input_data;
+    //            char ch_input_data[100];
+    //            
+    //            cout << "save "<< levels[j].runs_list[i]->min_key  << " to " << levels[j].runs_list[i]->max_key << endl;
+
+
+    //            ///////// problem : runs_list[i]->entry.val.x OR runs_list[i]->mapping.val.x
+    //            //entry_t* mapping1;
+    //            //mapping1 = levels.front().runs_list[i]->return_entry();                
+    //            //cout << "entry size = " << sizeof(mapping1) << endl;
+    //            //for (int z = 0; z < sizeof(mapping1); z++) {
+    //            //    cout << "test3 -> " << z << endl;
+    //            //    input_data = to_string(mapping1->val.x) + "  " + to_string(mapping1->val.y) + "  " + to_string(mapping1->key) + "\n";
+    //            //}
+
+    //            /*for (const auto& entry : levels.front().runs_list[i]->return_entry())
+    //            {
+    //                cout << "test3 "<< endl;
+    //                cout << entry.val.x << " " << entry.val.y << " " << entry.key << "\n";
+    //            }*/
+
+    //            cout << "test4 " << endl;
+
+    //            /*for (const auto& entry : levels[j].runs_list[i]->mapping) {
+    //                input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
+    //            }*/
+
+    //            /*input_data = to_string(levels[j].runs_list[i]->mapping->val.x) + "  " + to_string(levels[j].runs_list[i]->mapping->val.y) + "  " + to_string(levels[j].runs_list[i]->mapping->key) + "\n";
+    //            cout << input_data << endl;*/
+
+    //            strcpy(ch_input_data, input_data.c_str());
+    //            fputs(ch_input_data, fp); //ë¬¸ìì—´ ì…ë ¥
+
+
+    //            fclose(fp); //íŒŒì¼ í¬ì¸í„° ë‹«ê¸°
+
+    //        }
+    //        else {
+    //            cout << "run " << j << "_" << i << " is null" << endl;
+    //        }
+    //    }          
+    //}
+
+
+
 }

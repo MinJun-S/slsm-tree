@@ -6,7 +6,7 @@
 #include "types.h"
 #include "worker_pool.h"
 
-#define DEFAULT_TREE_DEPTH 5
+#define DEFAULT_TREE_DEPTH 86
 #define DEFAULT_TREE_FANOUT 1
 #define DEFAULT_BUFFER_NUM_PAGES 1000
 #define DEFAULT_THREAD_COUNT 4
@@ -23,7 +23,7 @@ class LSMTree {
     float bf_bits_per_entry;
     vector<Level> levels;
     Run * get_run(int);
-    void merge_down(vector<Level>::iterator);
+    void merge_down(vector<Level>::iterator, int);
 public:
     LSMTree(int, int, int, int, float);
     void put(KEY_t, VAL_t);
@@ -31,6 +31,8 @@ public:
     void range(KEY_t, KEY_t);
     void del(KEY_t);
     void load(std::string);
+    void print_tree();
+    void save_run();
 };
 
 KEY_t make_key(float x, float y);
