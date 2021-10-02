@@ -7,7 +7,7 @@
 #include "types.h"
 #include "bloom_filter.h"
 
-#define TMP_FILE_PATTERN "/tmp/lsm-XXXXXX"
+//#define TMP_FILE_PATTERN "/tmp/lsm-XXXXXX"
 
 using namespace std;
 
@@ -20,12 +20,12 @@ class Run {
     long file_size() { return max_size * sizeof(entry_t) * 2; }
     //vector<int> spatial_filter;
 public:
-    int idx_level;
+    int idx_level, idx_run;
     long size, max_size;
     string tmp_file;
     KEY_t max_key;
     KEY_t min_key;
-    Run(long, float, KEY_t, KEY_t, int);
+    Run(long, float, KEY_t, KEY_t, int, int);
     ~Run(void);
     entry_t * map_read(size_t, off_t);
     entry_t * map_read(void);

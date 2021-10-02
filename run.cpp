@@ -11,30 +11,33 @@
 
 using namespace std;
 
-Run::Run(long max_size, float bf_bits_per_entry, KEY_t max_key, KEY_t min_key, int idx_level) :
-         max_size(max_size),
-         bloom_filter(max_size * bf_bits_per_entry),
-         max_key(max_key),
-         min_key(min_key),
-         idx_level(idx_level)
+Run::Run(long max_size, float bf_bits_per_entry, KEY_t max_key, KEY_t min_key, int idx_level, int idx_run) :
+    max_size(max_size),
+    bloom_filter(max_size* bf_bits_per_entry),
+    max_key(max_key),
+    min_key(min_key),
+    idx_level(idx_level),
+    idx_run(idx_run)
 {
     char *tmp_fn;
 
     size = 0;
     fence_pointers.reserve(max_size / getpagesize());
     
-    tmp_fn = strdup(TMP_FILE_PATTERN);
-    tmp_file = mkstemp(tmp_fn);
+    /*tmp_fn = strdup(TMP_FILE_PATTERN);
+    tmp_file = mkstemp(tmp_fn);*/
     
+    tmp_file = to_string(idx_level) + "_" + to_string(idx_run); // +".txt";
+
     mapping = nullptr;
     mapping_fd = -1;
 
-    string run_name = to_string(idx_level) + "_";
+    string run_name = to_string(idx_level) + "_";  // maybe remove!!!!
 }
 
 Run::~Run(void) {
     assert(mapping == nullptr);
-    remove(tmp_file.c_str());
+    //remove(tmp_file.c_str());        // <- 주석처리하면 파일이 남긴 함 + "?"파일은 남음
 }
 
 entry_t * Run::map_read(size_t len, off_t offset) {

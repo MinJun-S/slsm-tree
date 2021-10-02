@@ -53,7 +53,7 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
     max_key = KEY_MAX / 4 - 1;
 
     for (int i = 0; i < 4; i++) {
-        Run* tmp1 = new Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key, 1);
+        Run* tmp1 = new Run(levels.front().max_run_size, bf_bits_per_entry, max_key, min_key, 1, i);
         levels.front().runs_list[i] = tmp1;
     }
 }
@@ -116,7 +116,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
                 max_key = temp * (i + 1);
                 min_key = temp * i;
                 
-                Run* tmp = new Run(next->max_run_size, bf_bits_per_entry, max_key, min_key, level_temp);
+                Run* tmp = new Run(next->max_run_size, bf_bits_per_entry, max_key, min_key, level_temp, i);
                 next->runs_list[i] = tmp;
                 next->runs_list[i]->map_write();
             }
@@ -161,7 +161,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
             KEY_t max_key = current->runs_list[idx]->max_key;
             KEY_t min_key = current->runs_list[idx]->min_key;
 
-            Run* tmp = new Run(next->max_run_size, bf_bits_per_entry, max_key, min_key, level_temp);
+            Run* tmp = new Run(next->max_run_size, bf_bits_per_entry, max_key, min_key, level_temp, idx);
             next->runs_list[idx] = tmp;
             next->runs_list[idx]->map_write();
         }
@@ -224,7 +224,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
      */
     KEY_t min_temp = current->runs_list[idx]->min_key;
     KEY_t max_temp = current->runs_list[idx]->max_key;
-    Run* tmp = new Run(current->max_run_size, bf_bits_per_entry, max_temp, min_temp, level_temp - 1);
+    Run* tmp = new Run(current->max_run_size, bf_bits_per_entry, max_temp, min_temp, level_temp - 1, idx);
 
     delete current->runs_list[idx];
 
