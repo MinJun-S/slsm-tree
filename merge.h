@@ -26,8 +26,8 @@ struct merge_entry {
 typedef struct merge_entry merge_entry_t;
 
 class MergeContext {
-    priority_queue<merge_entry_t, vector<merge_entry_t>, greater<merge_entry_t>> queue;
 public:
+    priority_queue<merge_entry_t, vector<merge_entry_t>, greater<merge_entry_t>> queue;
     void add(entry_t *, long);
     entry_t next(void);
     bool done(void);

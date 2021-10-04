@@ -6,7 +6,7 @@
 #include "types.h"
 #include "worker_pool.h"
 
-#define DEFAULT_TREE_DEPTH 5
+#define DEFAULT_TREE_DEPTH 8
 #define DEFAULT_TREE_FANOUT 1
 #define DEFAULT_BUFFER_NUM_PAGES 1000
 #define DEFAULT_THREAD_COUNT 4
@@ -32,6 +32,7 @@ public:
     void del(KEY_t);
     void load(std::string);
     void print_tree();
+    void save_run();
 };
 
 KEY_t make_key(float x, float y);

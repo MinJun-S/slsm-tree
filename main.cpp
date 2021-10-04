@@ -75,6 +75,9 @@ void command_loop(LSMTree& tree) {
             */
             fclose(file);
             break;
+        case 's':
+            tree.save_run();
+            break;
         default:
             die("Invalid command.");
         }
@@ -121,6 +124,7 @@ int main(int argc, char *argv[]) {
 
     buffer_max_entries = buffer_num_pages * getpagesize() / sizeof(entry_t);
     //printf("%d", buffer_max_entries);
+
     LSMTree tree(buffer_max_entries, depth, fanout, num_threads, bf_bits_per_entry);
     command_loop(tree);
 
