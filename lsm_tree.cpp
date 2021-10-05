@@ -124,6 +124,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     char ch_input_data[100];
     int i = idx * 4;
     FILE* fp = NULL;
+    temp = 4294967295 / pow(4, current->runs_list[idx]->idx_level);
     if (current->runs_list[idx]->idx_level < 3) {
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // generate file
@@ -157,6 +158,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
             levels.front().runs_list[i]->put(tmp);
             */
             next->runs_list[i]->put(entry);
+            next->runs_list[i]->spatial_filter[(entry.key - next->runs_list[i]->min_key) / (temp / 4)] = 1;
             //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             // input to txt file
             input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
@@ -177,6 +179,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         for (const auto& entry : current->runs_list[idx]->entries) {
             next->runs_list[idx]->put(entry);
+            next->runs_list[idx]->spatial_filter[(entry.key - next->runs_list[idx]->min_key) / (temp / 4)] = 1;
             //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             // input to txt file
             input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
@@ -297,6 +300,7 @@ void LSMTree::put(KEY_t key, VAL_t val) {
         levels.front().runs_list[i]->put(tmp);
         */
         levels.front().runs_list[i]->put(entry);
+        levels.front().runs_list[i]->spatial_filter[(entry.key - levels.front().runs_list[i]->min_key) / (temp / 16)] = 1;
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // input to txt file                
@@ -553,74 +557,70 @@ void LSMTree::print_tree()
 
 void LSMTree::save_run()
 {
-    //cout << "start save" << endl;
+    cout << "start save" << endl;
 
-    //vector<Level>::iterator current;
-    //MergeContext merge_ctx;
-    //entry_t entry;
-    //string st_file_name;
-    //char ch_file_name[100];
-    //string input_data;
-    //char ch_input_data[100];
+    vector<Level>::iterator current;
+    MergeContext merge_ctx;
+    entry_t entry;
+    string st_file_name;
+    char ch_file_name[100];
+    string input_data;
+    char ch_input_data[100];
 
-    //current = levels.begin();
-    //int idx = 0;
-    //for (int j = 1; j <= levels.size(); j++) {
-    //    cout << j << endl;
-    //    if (current->runs_list[idx]->idx_level <= 3 && current->runs_list[idx] != NULL) {
-    //        //int level_temp = current->runs_list[idx]->idx_level;
-    //        for (int i = 0; i < int(pow(4, j)); i++) {
-    //            if (current->runs_list[i] != NULL) {
-    //                merge_ctx.add(current->runs_list[i]->map_read(), current->runs_list[i]->size);
-    //                //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //                // generate file
-    //                st_file_name = "run_list/" + to_string(j) + "_" + to_string(i) + ".txt";
-    //                cout << st_file_name << endl;
-    //                strcpy(ch_file_name, st_file_name.c_str());
-    //                FILE* fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기
-    //                //////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
-
-    //                while (!merge_ctx.done()) {
-    //                    entry = merge_ctx.next();
-    //                    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //                    // input to txt file
-    //                    input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
-    //                    strcpy(ch_input_data, input_data.c_str());
-    //                    fputs(ch_input_data, fp); //문자열 입력
-    //                    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //                }
-    //                fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////////////////////////////<------------this 
-    //            }
-    //            else break;
-    //        }
-    //    }
-    //    else if (current->runs_list[idx]->idx_level > 3 && current->runs_list[idx] != NULL) {
-    //        for (int i = 0; i < 64; i++) {
-    //            if (current->runs_list[i] != NULL) {
-    //                merge_ctx.add(current->runs_list[i]->map_read(), current->runs_list[i]->size);
-    //                //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //                // generate file
-    //                st_file_name = "run_list/" + to_string(j) + "_" + to_string(i) + ".txt";
-    //                cout << st_file_name << endl;
-    //                strcpy(ch_file_name, st_file_name.c_str());
-    //                FILE* fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기
-    //                //////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
-
-    //                while (!merge_ctx.done()) {
-    //                    entry = merge_ctx.next();
-    //                    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //                    // input to txt file
-    //                    input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
-    //                    strcpy(ch_input_data, input_data.c_str());
-    //                    fputs(ch_input_data, fp); //문자열 입력
-    //                    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //                }
-    //                fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////////////////////////////<------------this 
-    //            }
-    //            else break;
-    //        }
-    //    }
-    //    else break;
-    //    current += 1;
-    //}
+    current = levels.begin();
+    int idx = 0;
+    FILE* fp = NULL;
+    for (int j = 1; j <= levels.size(); j++) {
+        cout << j << endl;
+        if (current->runs_list[idx]->idx_level <= 3 && current->runs_list[idx] != NULL) {
+            for (int i = 0; i < int(pow(4, j)); i++) {
+                if (current->runs_list[i] != NULL) {
+                    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                    // generate file
+                    st_file_name = "run_list/" + to_string(j) + "_" + to_string(i) + ".txt";
+                    cout << st_file_name << endl;
+                    strcpy(ch_file_name, st_file_name.c_str());
+                    fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기
+                    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
+                    for (const auto& entry : current->runs_list[idx]->entries)
+                    {
+                        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                        // input to txt file
+                        input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
+                        strcpy(ch_input_data, input_data.c_str());
+                        fputs(ch_input_data, fp); //문자열 입력
+                        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                    }
+                    fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////////////////////////////<------------this 
+                }
+                else break;
+            }
+        }
+        else if (current->runs_list[idx]->idx_level > 3 && current->runs_list[idx] != NULL) {
+            for (int i = 0; i < 64; i++) {
+                if (current->runs_list[i] != NULL) {
+                    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                    // generate file
+                    st_file_name = "run_list/" + to_string(j) + "_" + to_string(i) + ".txt";
+                    cout << st_file_name << endl;
+                    strcpy(ch_file_name, st_file_name.c_str());
+                    fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기
+                    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
+                    for (const auto& entry : current->runs_list[idx]->entries)
+                    {
+                        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                        // input to txt file
+                        input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
+                        strcpy(ch_input_data, input_data.c_str());
+                        fputs(ch_input_data, fp); //문자열 입력
+                        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                    }
+                    fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////////////////////////////<------------this 
+                }
+                else break;
+            }
+        }
+        else break;
+        current += 1;
+    }
 }

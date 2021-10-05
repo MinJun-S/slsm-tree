@@ -20,6 +20,7 @@ class Run {
     long file_size() { return max_size * sizeof(entry_t) * 2; }
     //vector<int> spatial_filter;
 public:
+    bool spatial_filter[4];
     set<entry_t> entries;
     //entry_t* mapping;
     int idx_level, idx_run;
@@ -46,10 +47,5 @@ public:
             return 0;
     }
     string run_name;
-
-
-
-    //entry_t* mapping;
-    //entry_t * return_entry(void);
 };
 #endif
