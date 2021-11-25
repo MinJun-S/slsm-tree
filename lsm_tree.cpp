@@ -55,30 +55,33 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
     while ((depth_run--) > 0) {
         cnt += 1;
         if (cnt == 1) {
-            int temp = 4294967295 / 4;
+            int temp = KEY_MAX / 4;
             for (int i = 0; i < 4; i++) {
                 min_key = temp * i;
-                max_key = temp * (i + 1) - 1;
-                Run* tmp1 = new Run(current->max_run_size, bf_bits_per_entry, max_key, min_key, 1, i);
+                max_key = temp * (i + 1) - 1; 
+                Run* tmp1 = new Run(current->max_run_size, bf_bits_per_entry, max_key, min_key, 1, i);                
                 current->runs_list[i] = tmp1;
+                current->runs_list[i]->spatial_filter[0] = 0; current->runs_list[i]->spatial_filter[1] = 0; current->runs_list[i]->spatial_filter[2] = 0; current->runs_list[i]->spatial_filter[3] = 0;
             }
         }
         else if (cnt == 2) {
-            int temp = 4294967295 / 16;
+            int temp = KEY_MAX / 16;
             for (int i = 0; i < 16; i++) {
                 min_key = temp * i;
                 max_key = temp * (i + 1) - 1;
                 Run* tmp1 = new Run(current->max_run_size, bf_bits_per_entry, max_key, min_key, 2, i);
                 current->runs_list[i] = tmp1;
+                current->runs_list[i]->spatial_filter[0] = 0; current->runs_list[i]->spatial_filter[1] = 0; current->runs_list[i]->spatial_filter[2] = 0; current->runs_list[i]->spatial_filter[3] = 0;
             }
         }
         else {
-            int temp = 4294967295 / 64;
+            int temp = KEY_MAX / 64;
             for (int i = 0; i < 64; i++) {
                 min_key = temp * i;
                 max_key = temp * (i + 1) - 1;
                 Run* tmp1 = new Run(current->max_run_size, bf_bits_per_entry, max_key, min_key, cnt, i);
                 current->runs_list[i] = tmp1;
+                current->runs_list[i]->spatial_filter[0] = 0; current->runs_list[i]->spatial_filter[1] = 0; current->runs_list[i]->spatial_filter[2] = 0; current->runs_list[i]->spatial_filter[3] = 0;
             }
         }
         cout << cnt << endl;
@@ -124,7 +127,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     char ch_input_data[100];
     int i = idx * 4;
     FILE* fp = NULL;
-    temp = 4294967295 / pow(4, current->runs_list[idx]->idx_level);
+    temp = KEY_MAX / pow(4, current->runs_list[idx]->idx_level);
     if (current->runs_list[idx]->idx_level < 3) {
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // generate file
@@ -158,7 +161,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
             levels.front().runs_list[i]->put(tmp);
             */
             next->runs_list[i]->put(entry);
-            next->runs_list[i]->spatial_filter[(entry.key - next->runs_list[i]->min_key) / (temp / 4)] = 1;
+            next->runs_list[i]->spatial_filter[(int)((entry.key - next->runs_list[i]->min_key) / (temp / 4))] = 1;
             //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             // input to txt file
             input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
@@ -179,7 +182,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         for (const auto& entry : current->runs_list[idx]->entries) {
             next->runs_list[idx]->put(entry);
-            next->runs_list[idx]->spatial_filter[(entry.key - next->runs_list[idx]->min_key) / (temp / 4)] = 1;
+            next->runs_list[idx]->spatial_filter[(int)((entry.key - next->runs_list[idx]->min_key) / (temp / 4))] = 1;
             //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             // input to txt file
             input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
@@ -227,6 +230,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
 
     cout << "step5" << endl;
     current->runs_list[idx] = tmp;
+    current->runs_list[idx]->spatial_filter[0] = 0; current->runs_list[idx]->spatial_filter[1] = 0; current->runs_list[idx]->spatial_filter[2] = 0; current->runs_list[idx]->spatial_filter[3] = 0;
     cout << "~~~~~~~~~~end merge down~~~~~~~~~~" << endl;
 }
 
@@ -256,7 +260,7 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     /*
      * Flush the buffer to level 0
      */
-    int i = 0; KEY_t temp = 4294967295;                  // 'i' is a run index of levels
+    int i = 0; KEY_t temp = KEY_MAX;                  // 'i' is a run index of levels
     min_key = 0;
     max_key = temp / 4 - 1;
     int loop = 0;
@@ -300,7 +304,7 @@ void LSMTree::put(KEY_t key, VAL_t val) {
         levels.front().runs_list[i]->put(tmp);
         */
         levels.front().runs_list[i]->put(entry);
-        levels.front().runs_list[i]->spatial_filter[(entry.key - levels.front().runs_list[i]->min_key) / (temp / 16)] = 1;
+        levels.front().runs_list[i]->spatial_filter[(int)((entry.key - levels.front().runs_list[i]->min_key) / (temp / 16))] = 1;
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // input to txt file                
@@ -515,7 +519,7 @@ KEY_t make_key(float x, float y)
     KEY_t temp = 1; 
     temp = temp << 31;
     //show(temp);
-    for (int i = 15; i >= 0; i--)
+    for (int i = 63; i >= 0; i--) //15
     {
         x_md = (x2 + x1) / 2;
         y_md = (y2 + y1) / 2;
@@ -623,4 +627,200 @@ void LSMTree::save_run()
         else break;
         current += 1;
     }
+}
+
+
+set<int> LSMTree::Create_Query_filter(VAL_t query_val, float range) 
+{
+    VAL_t lb; VAL_t ub;                 // lower and upper of query value's range
+    VAL_t min_key; VAL_t max_key;       // lower and upper of each MBR
+
+    //set<int> Q_filter;                // -> Change Global value
+
+    // Compute lower and upper from query_val
+    lb.x = query_val.x - range; lb.y = query_val.y - range;
+    ub.x = query_val.x + range; ub.y = query_val.y + range;
+
+    float measure = 0;
+    float x_size; 
+    float y_size;    
+
+    struct coordinate
+    {
+        int x;
+        int y;
+    };
+
+    struct coordinate zindex[64] = {
+        {0,0},{0,1},{1,0},{1,1},
+        {0,2},{0,3},{1,2},{1,3},
+        {2,0},{2,1},{3,0},{3,1},
+        {2,2},{2,3},{3,2},{3,3},
+
+        {0,4},{0,5},{1,4},{1,5},
+        {0,6},{0,7},{1,6},{1,7},
+        {2,4},{2,5},{3,4},{3,5},
+        {2,6},{2,7},{3,6},{3,7},  ////// 32 z-order num(x,y) in left
+
+        {4,0},{4,1},{5,0},{5,1},
+        {4,2},{4,3},{5,2},{5,3},
+        {6,0},{6,1},{7,0},{7,1},
+        {6,2},{6,3},{7,2},{7,3},
+
+        {4,4},{4,5},{5,4},{5,5},
+        {4,6},{4,7},{5,6},{5,7},
+        {6,4},{6,5},{7,4},{7,5},
+        {6,6},{6,7},{7,6},{7,7}  ////// 32 z-order num(x,y) in right
+    };
+
+    // Compute lower and upper of each MBR and Overlap Check with range of query_value
+    x_size = (GEO_X_MAX - GEO_X_MIN) / 8;
+    y_size = (GEO_Y_MAX - GEO_Y_MIN) / 8;
+
+    for (int i = 0; i < 64; i++) {     // 64
+        min_key.x = (x_size * zindex[i].x) + GEO_X_MIN;
+        min_key.y = (y_size * zindex[i].y) + GEO_Y_MIN;
+        max_key.x = ((x_size * (zindex[i].x + 1))) + GEO_X_MIN - 0.001;
+        max_key.y = ((y_size * (zindex[i].y + 1))) + GEO_Y_MIN - 0.001;
+
+        //cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+        //cout << i << ".  {" << zindex[i].x  << "  " << zindex[i].y << "}  ||  ("<< min_key.x << "  " << min_key.y << ")  ||  (" << max_key.x << "  " << max_key.y <<")" << endl;
+
+        measure = Compute_Overlap(lb, ub, min_key, max_key);
+
+        if (measure > 0) {
+            Q_filter.insert(i);
+        }
+    }
+
+    return Q_filter;
+}
+
+void LSMTree::reset_Q_filter() {
+    // When move to next level, Reset query filter in range Query
+    Q_filter.clear();
+}
+
+float LSMTree::Compute_Overlap(VAL_t Lower, VAL_t Upper, VAL_t min_key, VAL_t max_key)
+{
+    float dist_x = 0; float dist_y = 0;
+    float measure = 0;
+
+    dist_x = min(Upper.x - min_key.x, max_key.x - Lower.x);                                 // #include <algorithm>
+    dist_y = min(Upper.y - min_key.y, max_key.y - Lower.y);
+
+    if (dist_x > 0 && dist_y > 0) {
+        measure = dist_x * dist_y;
+    }
+
+    return measure;
+
+}
+
+// void range_query(entry_t, float);
+void LSMTree::range_query(entry_t query_point, float distance)
+{
+    vector<entry_t> range_result;
+
+    entry_t Lower; entry_t Upper;                                   // Lower, Upper of query_point's Query Range
+
+    vector<Level>::iterator current_level;
+    current_level = levels.begin();
+
+    Lower.val.x = query_point.val.x - distance; Lower.val.y = query_point.val.y - distance;
+    Upper.val.x = query_point.val.x + distance; Upper.val.y = query_point.val.y + distance;
+
+    Lower.key = make_key(Lower.val.x, Lower.val.y);
+    Upper.key = make_key(Upper.val.x, Upper.val.y);
+
+    set<entry_t> disk_entries;
+
+    //////////// [ Range Query in Memory ] ////////////     
+    cout << "  " << endl;
+    cout << "* Buffer Result " << endl;
+    cout << "-------------------------------------------------------------------------------------" << endl;
+    cout << "[   X             Y             KEY            Distance ]" << endl;
+
+    cout << left;
+    for (const auto& entry : buffer.entries)
+    {
+        if (Compute_distance(query_point, entry) < distance) {
+                range_result.push_back(entry);
+            cout << setw(9) << entry.val.x << "  |  " << setw(9) << entry.val.y << "  |  " << setw(11) << entry.key << "  |  " << setw(9) << Compute_distance(query_point, entry) << endl;
+        }
+    }    
+
+    set<int> Q_filter = Create_Query_filter(query_point.val, distance);
+    set<int>::iterator iter;
+
+    /* // Check a number of Q_filter
+    for (iter = Q_filter.begin(); iter != Q_filter.end(); iter++) {
+        cout << *iter << endl;
+    }*/
+
+    //////////// [ Range Query in Disk Level ] //////////// 
+    for (int i = 0; i < DEFAULT_TREE_DEPTH; i++)
+    {
+        cout << "  " << endl;
+        cout << "* Disk Level " << i + 1 << " Result " << endl;
+        cout << "-------------------------------------------------------------------------------------" << endl;
+        cout << "[   X             Y             KEY            Distance         Run Index ]" << endl;
+
+        if (i < 3) {
+            int temp = 0;
+            for (iter = Q_filter.begin(); iter != Q_filter.end(); iter++) {
+                int check_run = (*iter) / pow(4, 2 - i);                        // Matchting {Q_filter size and Full size}
+
+                if (check_run != temp) {
+                    // Disk Run Filtering by using Q_filter
+                    if (current_level->runs_list[check_run]->spatial_filter[0] == 0 && current_level->runs_list[check_run]->spatial_filter[1] == 0 && current_level->runs_list[check_run]->spatial_filter[2] == 0 && current_level->runs_list[check_run]->spatial_filter[3] == 0) {
+                        continue;
+                    }
+
+                    disk_entries = current_level->runs_list[check_run]->entries;
+                    // Insert entry to Result
+                    for (const auto& entry : disk_entries)
+                    {
+                        if (Compute_distance(query_point, entry) < distance) {
+                            range_result.push_back(entry);
+                            cout << setw(9) << entry.val.x << "  |  " << setw(9) << entry.val.y << "  |  " << setw(11) << entry.key << "  |  " << setw(9) << Compute_distance(query_point, entry) << "      | run index : " << check_run << endl;
+                        }
+                    }
+                    temp = check_run;
+                    cout << "-------------------------------------------------------------------------------------" << endl;
+                }
+            }    
+            current_level += 1;
+        }
+        // Disk Level 4 ~
+        else {
+            for (iter = Q_filter.begin(); iter != Q_filter.end(); iter++) {
+                int check_run = (*iter);
+
+                // Disk Run Filtering by using Q_filter
+                if (current_level->runs_list[check_run]->spatial_filter[0] == 0 && current_level->runs_list[check_run]->spatial_filter[1] == 0 && current_level->runs_list[check_run]->spatial_filter[2] == 0 && current_level->runs_list[check_run]->spatial_filter[3] == 0) {
+                    continue;
+                }
+
+                disk_entries = current_level->runs_list[check_run]->entries;
+                // Insert entry to Result
+                for (const auto& entry : disk_entries)
+                {
+                    if (Compute_distance(query_point, entry) < distance) {
+                        range_result.push_back(entry);
+                        cout << setw(9) << entry.val.x << "  |  " << setw(9) << entry.val.y << "  |  " << setw(11) << entry.key << "  |  " << setw(9) << Compute_distance(query_point, entry) << "      | run index : " << check_run << endl;
+                    }
+                }
+                cout << "-------------------------------------------------------------------------------------" << endl;
+            }    
+            current_level += 1;
+        }        
+    }
+}
+
+float LSMTree::Compute_distance(entry_t query_point, entry_t point) {
+    float distance;
+
+    distance = sqrt(pow(point.val.x - query_point.val.x, 2) + pow(point.val.y - query_point.val.y, 2));
+    return distance;
 }

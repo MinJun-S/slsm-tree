@@ -1,10 +1,16 @@
 #include <vector>
+#include <set>
+#include <algorithm>
+#include <utility>
+#include <iomanip>
 
 #include "buffer.h"
 #include "level.h"
 #include "spin_lock.h"
 #include "types.h"
 #include "worker_pool.h"
+
+using namespace std;
 
 #define DEFAULT_TREE_DEPTH 8
 #define DEFAULT_TREE_FANOUT 1
@@ -25,6 +31,7 @@ class LSMTree {
     Run * get_run(int);
     void merge_down(vector<Level>::iterator, int);
 public:
+    set<int> Q_filter;
     LSMTree(int, int, int, int, float);
     void put(KEY_t, VAL_t);
     void get(KEY_t);
@@ -33,6 +40,12 @@ public:
     void load(std::string);
     void print_tree();
     void save_run();
+    set<int> Create_Query_filter(VAL_t, float);           // range query
+    void reset_Q_filter();
+    float Compute_Overlap(VAL_t, VAL_t, VAL_t, VAL_t);
+    
+    void range_query(entry_t, float);
+    float Compute_distance(entry_t, entry_t);
 };
 
 KEY_t make_key(float x, float y);

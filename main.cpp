@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vector>
 
 #include "lsm_tree.h"
 #include "sys.h"
@@ -11,6 +12,7 @@ void command_loop(LSMTree& tree) {
     KEY_t key_a, key_b;
     VAL_t val;
     string file_path;
+    
     int i = 0;
     while (cin >> command) {
         switch (command) {
@@ -29,7 +31,7 @@ void command_loop(LSMTree& tree) {
             cin >> key_a;
             tree.get(key_a);
             break;
-        case 'r':
+        case 'h':                              // Modified
             cin >> key_a >> key_b;
             tree.range(key_a, key_b);
             break;
@@ -54,30 +56,38 @@ void command_loop(LSMTree& tree) {
             while (fscanf(file, "%c %f %f", &op, &x, &y)!=EOF)
             {
                 val.x = x; val.y = y;
-                tree.put(make_key(x, y), val);
+                tree.put(make_key(val.x, val.y), val);
                 //cout << x<<"  "<< y << endl;
                 i++;
             }
             cout << i << endl;
-            /*
-            if (file == NULL)
-            {
-                cout << "asfadasdfadsfasdfass" << endl;
-            }
-            else
-            {
-                while (!feof(file)) 
-                {
-                    fscanf(file, "%c %f %f", &op, &x, &y);
-                    cout << i++ << endl;
-                }
-            }
-            */
             fclose(file);
             break;
         case 's':
             tree.save_run();
             break;
+        case 'r':                                       // range query
+
+            float dist;    
+            entry_t entry;
+            cout << "* Input x, y and range_distance " << endl;
+            cin >> val.x >> val.y >> dist;
+            entry.val.x = val.x;
+            entry.val.y = val.y;
+            entry.key = make_key(val.x, val.y);
+            
+            KEY_t Lower; KEY_t Upper;
+            Lower = make_key(entry.val.x - dist, entry.val.y - dist);
+            Upper = make_key(entry.val.x + dist, entry.val.y + dist);
+            cout << "  " << endl;
+            cout << "* Compute Key Range : [ " << Lower << " ~ " << Upper << " ]" << endl;
+
+            tree.range_query(entry, dist);
+
+            tree.reset_Q_filter();
+
+            break;
+
         default:
             die("Invalid command.");
         }
@@ -108,7 +118,7 @@ int main(int argc, char *argv[]) {
         case 't':
             num_threads = atoi(optarg);
             break;
-        case 'r':
+        case 'e':                                       // Modified
             bf_bits_per_entry = atof(optarg);
             break;
         default:
