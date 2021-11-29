@@ -110,7 +110,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
         die("no more space in tree.");
     }
     else {
-        cout << "~~~~~~~~~~start merge down~~~~~~~~~~" << endl;
+        cout << "\n ┏------------- [ START : Merge Down ] -------------┓\n" << endl;
         next = current + 1;
     }
 
@@ -132,7 +132,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // generate file
         st_file_name = "runs_list/" + to_string(level_temp) + "_" + to_string(i) + ".txt";
-        cout << st_file_name << endl;
+        cout << "\n * " << st_file_name << endl;
         strcpy(ch_file_name, st_file_name.c_str());
         fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
@@ -149,7 +149,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
                 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                 // generate file
                 st_file_name = "runs_list/" + to_string(level_temp) + "_" + to_string(i) + ".txt";
-                cout << st_file_name << endl;
+                cout << "\n * " << st_file_name << endl;
                 strcpy(ch_file_name, st_file_name.c_str());
                 fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기
                 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
@@ -165,7 +165,6 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
             //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             // input to txt file
             input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
-            //cout << input_data << endl;
             strcpy(ch_input_data, input_data.c_str());
             fputs(ch_input_data, fp); //문자열 입력
             //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -176,7 +175,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // generate file
         st_file_name = "runs_list/" + to_string(level_temp) + "_" + to_string(idx) + ".txt";
-        cout << st_file_name << endl;
+        cout << "\n * " << st_file_name << endl;
         strcpy(ch_file_name, st_file_name.c_str());
         fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -186,21 +185,17 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
             //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             // input to txt file
             input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
-            //cout << input_data << endl;
             strcpy(ch_input_data, input_data.c_str());
             fputs(ch_input_data, fp); //문자열 입력
             //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         }
         fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////////////////////////////<------------this 
     }
-    cout << "step4" << endl;
 
     /*
      * if the next level does not have space for the current level,
      * recursively merge the next level downwards to create some
      */
-
-    cout << "step1" << endl;
 
     if (current->runs_list[idx]->idx_level < 3) {
         for (int i = 4 * idx; i < 4 * idx + 4; i++) {
@@ -218,8 +213,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     }
 
     /*
-     * Clear the current level to delete the old (now
-     * redundant) entry files.
+     * Clear the current level to delete the old (now redundant) entry files.
      */
     KEY_t min_temp = current->runs_list[idx]->min_key;
     KEY_t max_temp = current->runs_list[idx]->max_key;
@@ -228,10 +222,10 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     current->runs_list[idx]->empty();
     //delete current->runs_list[idx];
 
-    cout << "step5" << endl;
+    
     current->runs_list[idx] = tmp;
     current->runs_list[idx]->spatial_filter[0] = 0; current->runs_list[idx]->spatial_filter[1] = 0; current->runs_list[idx]->spatial_filter[2] = 0; current->runs_list[idx]->spatial_filter[3] = 0;
-    cout << "~~~~~~~~~~end merge down~~~~~~~~~~" << endl;
+    cout << "\n ┗------------- [ END : Merge Down ] -------------┛\n" << endl;
 }
 
 void LSMTree::put(KEY_t key, VAL_t val) {
@@ -245,17 +239,14 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     }
 
     /*
-     * If the buffer is full, flush level 0 if necessary
-     * to create space
+     * If the buffer is full, flush level 0 if necessary to create space
      */
-    cout << "step put1" << endl;
 
     for (int i = 0; i < 4; i++) {
         if (levels.front().runs_list[i] != NULL) {
             merge_down(levels.begin(), i);
         }
     }
-    cout << "step put2" << endl;
 
     /*
      * Flush the buffer to level 0
@@ -270,7 +261,7 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     string st_file_name;        
     char ch_file_name[100];
     st_file_name = "runs_list/" + to_string(levels.front().runs_list[i]->idx_level) + "_" + to_string(i) + ".txt";
-    cout << st_file_name << endl;
+    cout << "\n * " << st_file_name << endl;
     strcpy(ch_file_name, st_file_name.c_str());
     FILE* fp = NULL;
     fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기
@@ -292,7 +283,7 @@ void LSMTree::put(KEY_t key, VAL_t val) {
             //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             // generate file            
             st_file_name = "runs_list/" + to_string(levels.front().runs_list[i]->idx_level) + "_" + to_string(i) + ".txt";
-            cout << st_file_name << endl;
+            cout << "\n * " << st_file_name << endl;
             strcpy(ch_file_name, st_file_name.c_str());
             fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기            
             //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -309,7 +300,6 @@ void LSMTree::put(KEY_t key, VAL_t val) {
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // input to txt file                
         input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
-        //cout << input_data << endl;
         strcpy(ch_input_data, input_data.c_str());
         fputs(ch_input_data, fp); //문자열 입력        
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -317,15 +307,24 @@ void LSMTree::put(KEY_t key, VAL_t val) {
 
     fclose(fp);      //파일 포인터 닫기/////////////////////////////////////////////////////<-------얘도
 
-    cout << "part1 \n";
+
+    /*    *   Save Buffer's entries    */    
+    st_file_name = "runs_list/0_Buffer.txt";
+    cout << "\n * " << st_file_name << endl;
+    strcpy(ch_file_name, st_file_name.c_str());
+    fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기
+    for (const auto& entry : buffer.entries) {
+        // input to txt file
+        input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
+        strcpy(ch_input_data, input_data.c_str());
+        fputs(ch_input_data, fp); //문자열 입력
+    }
+    fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////////////////////////////<------------this
 
     buffer.empty();
     cout << buffer.entries.size() << endl;
 
-    cout << "part2 \n";
-    
     assert(buffer.put(key, val));
-    cout << "part3 \n";
 }
 
 Run * LSMTree::get_run(int index) {
