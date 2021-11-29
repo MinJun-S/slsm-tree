@@ -15,4 +15,5 @@ public:
     vector<entry_t> * range(KEY_t, KEY_t) const;
     bool put(KEY_t, VAL_t val);
     void empty(void);
+    
 };

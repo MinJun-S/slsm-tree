@@ -15,6 +15,7 @@ void command_loop(LSMTree& tree) {
     
     int i = 0;
     while (cin >> command) {
+        
         switch (command) {
         case 'p':
             cin >> val.x>>val.y;
@@ -80,16 +81,41 @@ void command_loop(LSMTree& tree) {
             Lower = make_key(entry.val.x - dist, entry.val.y - dist);
             Upper = make_key(entry.val.x + dist, entry.val.y + dist);
             cout << "  " << endl;
-            cout << "* Compute Key Range : [ " << Lower << " ~ " << Upper << " ]" << endl;
 
             tree.range_query(entry, dist);
 
             tree.reset_Q_filter();
+            
+            break;
+        case 'k':                                       // knn1 query
+            //entry_t entry;
+            int k;
+            cout << "* (kNN1) input x, y and k " << endl;
+            cin >> val.x >> val.y >> k;
+            entry.val.x = val.x;
+            entry.val.y = val.y;
+            entry.key = make_key(val.x, val.y);
+
+            tree.KNN_query1(entry, k);
+
+            break;
+
+        case 'n':                                       // knn2 query
+        //entry_t entry;
+            //int k;
+            cout << "* (kNN2) input x, y and k " << endl;
+            cin >> val.x >> val.y >> k;
+            entry.val.x = val.x;
+            entry.val.y = val.y;
+            entry.key = make_key(val.x, val.y);
+
+            tree.KNN_query2(entry, k);
 
             break;
 
         default:
-            die("Invalid command.");
+            cout << "* Please Insert Valid Command ! " << endl;
+            //die("Invalid command.");
         }
     }
 }

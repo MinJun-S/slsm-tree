@@ -717,7 +717,6 @@ float LSMTree::Compute_Overlap(VAL_t Lower, VAL_t Upper, VAL_t min_key, VAL_t ma
 
 }
 
-// void range_query(entry_t, float);
 void LSMTree::range_query(entry_t query_point, float distance)
 {
     vector<entry_t> range_result;
@@ -739,7 +738,7 @@ void LSMTree::range_query(entry_t query_point, float distance)
     cout << "  " << endl;
     cout << "* Buffer Result " << endl;
     cout << "-------------------------------------------------------------------------------------" << endl;
-    cout << "[   X             Y             KEY            Distance ]" << endl;
+    cout << "[   X             Y             KEY          Distance ]" << endl;
 
     cout << left;
     for (const auto& entry : buffer.entries)
@@ -764,7 +763,7 @@ void LSMTree::range_query(entry_t query_point, float distance)
         cout << "  " << endl;
         cout << "* Disk Level " << i + 1 << " Result " << endl;
         cout << "-------------------------------------------------------------------------------------" << endl;
-        cout << "[   X             Y             KEY            Distance         Run Index ]" << endl;
+        cout << "[   X             Y             KEY          Distance         Run Index ]" << endl;
 
         if (i < 3) {
             int temp = 0;
@@ -823,4 +822,404 @@ float LSMTree::Compute_distance(entry_t query_point, entry_t point) {
 
     distance = sqrt(pow(point.val.x - query_point.val.x, 2) + pow(point.val.y - query_point.val.y, 2));
     return distance;
+}
+
+//// [ Top - Down ] ////
+void LSMTree::KNN_query1(entry_t query_point, int k)
+{
+    entry_t entry;
+    set<pair<float, entry_t>> k_result;                             // k Result set
+    float distance = 0;
+    float compute_d = 8.656678713232676;
+    set<int> Q_filter;
+    set<entry_t>::iterator l_k; set<entry_t>::iterator u_k;
+    set<entry_t>::iterator k_temp;
+
+    set<pair<float, entry_t>> temp_result;
+    set<int>::iterator Q_iter;
+    set<pair<float, entry_t>>::iterator iter_result;
+
+    l_k = u_k = buffer.entries.lower_bound(query_point);
+
+    // 앞뒤로 k/2씩 이동해서 k개 범위 도출 
+    for (int i = 0; i <= k; i++) {
+        if (compute_d > Compute_distance(query_point, *l_k)) {
+            compute_d = Compute_distance(query_point, *l_k);
+            k_temp = l_k;
+        }
+        if (compute_d > Compute_distance(query_point, *u_k)) {
+            compute_d = Compute_distance(query_point, *u_k);
+            k_temp = u_k;
+        }
+        l_k--;
+        u_k++;
+    }
+
+    // 2/k만큼 query_point로부터 가까운 진짜 LB, UB설정
+    l_k = u_k = k_temp;
+    for (int i = 0; i <= k; i++) {
+        temp_result.insert({ Compute_distance(query_point, *u_k) ,*u_k });
+        temp_result.insert({ Compute_distance(query_point, *l_k) ,*l_k });
+        l_k--;
+        u_k++;
+    }
+
+    //// [ Buffer ] 앞뒤 2/k 만큼 돌려서 나온 최종 k개 결과값을 k_result에 input //// 
+    set<pair<float, entry_t>>::iterator temp_set;
+
+    for (iter_result = temp_result.begin(); iter_result != temp_result.end(); iter_result++) {
+        if (k_result.size() < k) {
+            k_result.insert({ Compute_distance(query_point, (*iter_result).second), (*iter_result).second });
+        }
+        else {
+            temp_set = k_result.end();
+            temp_set--;
+            distance = (*temp_set).first;
+            temp_result.clear();
+            break;
+        }
+    }
+
+    Q_filter = Create_Query_filter(query_point.val, distance);
+
+    //// [ Disk ] 앞뒤 2/k 만큼 돌려서 나온 최종 k개 결과값을 k_result에 input //// 
+    for (int i = 0; i < DEFAULT_TREE_DEPTH; i++) {
+        if (i < 3) {
+            int temp = 0;
+            for (Q_iter = Q_filter.begin(); Q_iter != Q_filter.end(); Q_iter++) {
+                int check_run = (*Q_iter) / pow(4, 2 - i);
+                if (check_run != temp) {
+
+                    if (levels[i].runs_list[check_run]->spatial_filter[0] == 0 && levels[i].runs_list[check_run]->spatial_filter[1] == 0 && levels[i].runs_list[check_run]->spatial_filter[2] == 0 && levels[i].runs_list[check_run]->spatial_filter[3] == 0) {
+                        continue;
+                    }
+
+                    l_k = u_k = levels[i].runs_list[check_run]->entries.lower_bound(query_point);
+                    // 앞뒤로 k/2씩 이동해서 k개 출력
+                    compute_d = 8.656678713232676;
+                    for (int i = 0; i <= k; i++) {
+                        if (compute_d > Compute_distance(query_point, *l_k)) {
+                            compute_d = Compute_distance(query_point, *l_k);
+                            k_temp = l_k;
+                        }
+                        if (compute_d > Compute_distance(query_point, *u_k)) {
+                            compute_d = Compute_distance(query_point, *u_k);
+                            k_temp = u_k;
+                        }
+                        l_k--;
+                        u_k++;
+                    }
+                    l_k = u_k = k_temp;
+                    compute_d = 0;
+                    for (int i = 0; i <= k; i++) {
+                        temp_result.insert({ Compute_distance(query_point, *u_k) ,*u_k });
+                        temp_result.insert({ Compute_distance(query_point, *l_k) ,*l_k });
+                        l_k--;
+                        u_k++;
+                    }
+
+                    // compute_d만큼 range를 돌려서 결과를 temp_result에 input
+                    // range query <-- level, idx, query_point, distance
+                    //cout << compute_d << endl;
+                    //temp_result = NN_range(i, check_run, query_point, compute_d);
+
+                    for (iter_result = temp_result.begin(); iter_result != temp_result.end(); iter_result++) {
+                        if ((*iter_result).first < distance) {
+                            k_result.insert(*iter_result);
+
+                            if (k_result.size() > k) {
+                                temp_set = k_result.end();
+                                temp_set--;
+                                k_result.erase(*temp_set);
+                            }
+
+                            temp_set = k_result.end();
+                            temp_set--;
+                            distance = (*temp_set).first;
+                        }
+                        else {
+                            temp_result.clear();
+                            break;
+                        }
+                    }
+
+                    temp = check_run;
+                }
+            }
+        } // Disk Level 3 ~
+        else {
+            for (Q_iter = Q_filter.begin(); Q_iter != Q_filter.end(); Q_iter++) {
+                int check_run = (*Q_iter);
+
+                if (levels[i].runs_list[check_run]->spatial_filter[0] == 0 && levels[i].runs_list[check_run]->spatial_filter[1] == 0 && levels[i].runs_list[check_run]->spatial_filter[2] == 0 && levels[i].runs_list[check_run]->spatial_filter[3] == 0) {
+                    continue;
+                }
+
+                l_k = u_k = levels[i].runs_list[check_run]->entries.lower_bound(query_point);
+                // 앞뒤로 k/2씩 이동해서 k개 출력
+                compute_d = 8.656678713232676;
+                for (int i = 0; i <= k; i++) {
+                    if (compute_d > Compute_distance(query_point, *l_k)) {
+                        compute_d = Compute_distance(query_point, *l_k);
+                        k_temp = l_k;
+                    }
+                    if (compute_d > Compute_distance(query_point, *u_k)) {
+                        compute_d = Compute_distance(query_point, *u_k);
+                        k_temp = u_k;
+                    }
+                    l_k--;
+                    u_k++;
+                }
+                l_k = u_k = k_temp;
+                for (int i = 0; i <= k; i++) {
+                    temp_result.insert({ Compute_distance(query_point, *u_k) ,*u_k });
+                    temp_result.insert({ Compute_distance(query_point, *l_k) ,*l_k });
+                    l_k--;
+                    u_k++;
+                }
+
+                // compute_d만큼 range를 돌려서 결과를 temp_result에 input
+                // range query <-- level, idx, query_point, distance
+                //temp_result = NN_range(i, check_run, query_point, compute_d);
+
+                for (iter_result = temp_result.begin(); iter_result != temp_result.end(); iter_result++) {
+                    if ((*iter_result).first < distance) {
+                        k_result.insert(*iter_result);
+
+                        if (k_result.size() > k) {
+                            temp_set = k_result.end();
+                            temp_set--;
+                            k_result.erase(*temp_set);
+                        }
+
+                        temp_set = k_result.end();
+                        temp_set--;
+                        distance = (*temp_set).first;
+                    }
+                    else {
+                        temp_result.clear();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    //return k_result;
+    cout << "  " << endl;
+    cout << "* kNN Result " << endl;
+    cout << "-------------------------------------------------------------------------------------" << endl;
+    cout << "[     X             Y             KEY          Distance ]" << endl;
+    cout << left;
+    for (auto it = k_result.begin(); it != k_result.end(); it++) {
+        cout << setw(9) << (*it).second.val.x << "  |  " << setw(9) << (*it).second.val.y << "  |  " << setw(11) << (*it).second.key << "  |  " << setw(9) << (*it).first << endl;
+    }
+}
+
+//// [ Bottom - Up ] ////
+void LSMTree::KNN_query2(entry_t query_point, int k) {
+    entry_t entry;
+    set<pair<float, entry_t>> k_result;                             // k Result set
+    float distance = 0;
+    float compute_d = 8.656678713232676;
+    set<int> Q_filter;
+    set<entry_t>::iterator l_k; set<entry_t>::iterator u_k;
+    set<entry_t>::iterator k_temp;
+
+    set<pair<float, entry_t>> temp_result;
+    set<int>::iterator Q_iter;
+    set<pair<float, entry_t>>::iterator iter_result;
+
+    l_k = u_k = buffer.entries.lower_bound(query_point);
+
+    // 앞뒤로 k/2씩 이동해서 k개 범위 도출 
+    for (int i = 0; i <= k; i++) {
+        if (compute_d > Compute_distance(query_point, *l_k)) {
+            compute_d = Compute_distance(query_point, *l_k);
+            k_temp = l_k;
+        }
+        if (compute_d > Compute_distance(query_point, *u_k)) {
+            compute_d = Compute_distance(query_point, *u_k);
+            k_temp = u_k;
+        }
+        l_k--;
+        u_k++;
+    }
+
+    // 2/k만큼 query_point로부터 가까운 진짜 LB, UB설정
+    l_k = u_k = k_temp;
+    for (int i = 0; i <= k; i++) {
+        temp_result.insert({ Compute_distance(query_point, *u_k) ,*u_k });
+        temp_result.insert({ Compute_distance(query_point, *l_k) ,*l_k });
+        l_k--;
+        u_k++;
+    }
+
+    //// [ Buffer ] 앞뒤 2/k 만큼 돌려서 나온 최종 k개 결과값을 k_result에 input //// 
+    set<pair<float, entry_t>>::iterator temp_set;
+
+    for (iter_result = temp_result.begin(); iter_result != temp_result.end(); iter_result++) {
+        if (k_result.size() < k) {
+            k_result.insert({ Compute_distance(query_point, (*iter_result).second), (*iter_result).second });
+        }
+        else {
+            temp_set = k_result.end();
+            temp_set--;
+            distance = (*temp_set).first;
+            temp_result.clear();
+            break;
+        }
+    }
+
+    Q_filter = Create_Query_filter(query_point.val, distance);
+
+    //// [ Disk ] 앞뒤 2/k 만큼 돌려서 나온 최종 k개 결과값을 k_result에 input //// 
+    for (int i = DEFAULT_TREE_DEPTH-1; i >= 0; i--) {
+        if (i < 3) {
+            int temp = 0;
+            for (Q_iter = Q_filter.begin(); Q_iter != Q_filter.end(); Q_iter++) {
+                int check_run = (*Q_iter) / pow(4, 2 - i);
+                if (check_run != temp) {
+
+                    if (levels[i].runs_list[check_run]->spatial_filter[0] == 0 && levels[i].runs_list[check_run]->spatial_filter[1] == 0 && levels[i].runs_list[check_run]->spatial_filter[2] == 0 && levels[i].runs_list[check_run]->spatial_filter[3] == 0) {
+                        continue;
+                    }
+
+                    l_k = u_k = levels[i].runs_list[check_run]->entries.lower_bound(query_point);
+                    // 앞뒤로 k/2씩 이동해서 k개 출력
+                    compute_d = 8.656678713232676;
+                    for (int i = 0; i <= k; i++) {
+                        if (compute_d > Compute_distance(query_point, *l_k)) {
+                            compute_d = Compute_distance(query_point, *l_k);
+                            k_temp = l_k;
+                        }
+                        if (compute_d > Compute_distance(query_point, *u_k)) {
+                            compute_d = Compute_distance(query_point, *u_k);
+                            k_temp = u_k;
+                        }
+                        l_k--;
+                        u_k++;
+                    }
+                    l_k = u_k = k_temp;
+                    compute_d = 0;
+                    for (int i = 0; i <= k; i++) {
+                        temp_result.insert({ Compute_distance(query_point, *u_k) ,*u_k });
+                        temp_result.insert({ Compute_distance(query_point, *l_k) ,*l_k });
+                        l_k--;
+                        u_k++;
+                    }
+
+                    // compute_d만큼 range를 돌려서 결과를 temp_result에 input
+                    // range query <-- level, idx, query_point, distance
+                    //cout << compute_d << endl;
+                    //temp_result = NN_range(i, check_run, query_point, compute_d);
+
+                    for (iter_result = temp_result.begin(); iter_result != temp_result.end(); iter_result++) {
+                        if ((*iter_result).first < distance) {
+                            k_result.insert(*iter_result);
+
+                            if (k_result.size() > k) {
+                                temp_set = k_result.end();
+                                temp_set--;
+                                k_result.erase(*temp_set);
+                            }
+
+                            temp_set = k_result.end();
+                            temp_set--;
+                            distance = (*temp_set).first;
+                        }
+                        else {
+                            temp_result.clear();
+                            break;
+                        }
+                    }
+
+                    temp = check_run;
+                }
+            }
+        } // Disk Level 3 ~
+        else {
+            for (Q_iter = Q_filter.begin(); Q_iter != Q_filter.end(); Q_iter++) {
+                int check_run = (*Q_iter);
+
+                if (levels[i].runs_list[check_run]->spatial_filter[0] == 0 && levels[i].runs_list[check_run]->spatial_filter[1] == 0 && levels[i].runs_list[check_run]->spatial_filter[2] == 0 && levels[i].runs_list[check_run]->spatial_filter[3] == 0) {
+                    continue;
+                }
+
+                l_k = u_k = levels[i].runs_list[check_run]->entries.lower_bound(query_point);
+                // 앞뒤로 k/2씩 이동해서 k개 출력
+                compute_d = 8.656678713232676;
+                for (int i = 0; i <= k; i++) {
+                    if (compute_d > Compute_distance(query_point, *l_k)) {
+                        compute_d = Compute_distance(query_point, *l_k);
+                        k_temp = l_k;
+                    }
+                    if (compute_d > Compute_distance(query_point, *u_k)) {
+                        compute_d = Compute_distance(query_point, *u_k);
+                        k_temp = u_k;
+                    }
+                    l_k--;
+                    u_k++;
+                }
+                l_k = u_k = k_temp;
+                for (int i = 0; i <= k; i++) {
+                    temp_result.insert({ Compute_distance(query_point, *u_k) ,*u_k });
+                    temp_result.insert({ Compute_distance(query_point, *l_k) ,*l_k });
+                    l_k--;
+                    u_k++;
+                }
+
+                // compute_d만큼 range를 돌려서 결과를 temp_result에 input
+                // range query <-- level, idx, query_point, distance
+                //temp_result = NN_range(i, check_run, query_point, compute_d);
+
+                for (iter_result = temp_result.begin(); iter_result != temp_result.end(); iter_result++) {
+                    if ((*iter_result).first < distance) {
+                        k_result.insert(*iter_result);
+
+                        if (k_result.size() > k) {
+                            temp_set = k_result.end();
+                            temp_set--;
+                            k_result.erase(*temp_set);
+                        }
+
+                        temp_set = k_result.end();
+                        temp_set--;
+                        distance = (*temp_set).first;
+                    }
+                    else {
+                        temp_result.clear();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    //return k_result;
+    cout << "  " << endl;
+    cout << "* kNN Result " << endl;
+    cout << "-------------------------------------------------------------------------------------" << endl;
+    cout << "[     X             Y             KEY          Distance ]" << endl;
+    cout << left;
+    for (auto it = k_result.begin(); it != k_result.end(); it++) {
+        cout << setw(9) << (*it).second.val.x << "  |  " << setw(9) << (*it).second.val.y << "  |  " << setw(11) << (*it).second.key << "  |  " << setw(9) << (*it).first << endl;
+    }
+}
+
+// range query <-- level, idx, query_point, distance
+set<pair<float, entry_t>> LSMTree::NN_range(int current, int idx, entry_t query_point, float distance) {
+    set<pair<float, entry_t>> run_result;
+    set<entry_t> disk_entries;
+
+    disk_entries = levels[current].runs_list[idx]->entries;
+
+    for (const auto& entry : disk_entries)
+    {
+        if (Compute_distance(query_point, entry) < distance) {
+            run_result.insert(make_pair(Compute_distance(query_point, entry), entry));
+        }
+    }
+
+    return run_result;
 }

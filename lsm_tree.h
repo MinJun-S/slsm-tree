@@ -46,6 +46,12 @@ public:
     
     void range_query(entry_t, float);
     float Compute_distance(entry_t, entry_t);
+
+    void KNN_query1(entry_t, int);
+    void KNN_query2(entry_t, int);
+    set<pair<float, entry_t>> NN_range(int, int, entry_t, float);
+    
+    
 };
 
 KEY_t make_key(float x, float y);
