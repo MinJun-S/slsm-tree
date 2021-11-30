@@ -14,6 +14,51 @@ void command_loop(LSMTree& tree) {
     string file_path;
     
     int i = 0;
+
+    FILE* file; 
+
+    /* Ver. 1 */
+    file = fopen("SaveFile/Save_File.txt", "r");
+    
+    if (file == NULL) {
+        cout << "\n* Invalid file address. Please check Valid File address!" << endl;
+        fclose(file);
+    }
+    else {
+        while (!feof(file))
+        {
+            float x, y; KEY_t l_key;
+            fscanf(file, "%f %f %d\n",&x, &y, &l_key);
+            val.x = x; val.y = y;
+            tree.put(l_key, val);
+            //tree.put(make_key(val.x, val.y), val);
+            i++;
+        }
+        cout << "\n* Success s-LSM Building with " << i << " point data!" << endl;
+        fclose(file);
+    }
+
+    ///* Ver. 2 */
+    //file = fopen("src/sample_data.txt", "r");
+
+    //if (file == NULL) {
+    //    cout << "\n* Invalid file address. Please check Valid File address!" << endl;
+    //    fclose(file);
+    //}
+    //else {
+    //    while (!feof(file))
+    //    {
+    //        char op; float x, y; 
+    //        fscanf(file, "%c %f %f\n", &op, &x, &y);
+    //        val.x = x; val.y = y;
+    //        //tree.put(l_key, val);
+    //        tree.put(make_key(val.x, val.y), val);
+    //        i++;
+    //    }
+    //    cout << "\n* Success s-LSM Building with " << i << " point data!" << endl;
+    //    fclose(file);
+    //}
+
     while (cin >> command) {
         
         switch (command) {
@@ -40,33 +85,48 @@ void command_loop(LSMTree& tree) {
             cin >> key_a;
             tree.del(key_a);
             break;
-        case 'l':
+        case 'f':
             cin.ignore();
             getline(cin, file_path);
             // Trim quotes
-            tree.load(file_path.substr(1, file_path.size() - 2));
+            tree.load(file_path.substr(1, file_path.size() - 2));    // Original Source Code ver.
             break;
+
         case 't':
             tree.print_tree();
             break;
-        case 'f':
-            char op; float x, y;
+
+        case 'l':
+            cout << "\n* Loading File and Start s-LSM Building... " << endl;            
             FILE * file; 
-            file = fopen("input.txt", "rt");
-            
-            while (fscanf(file, "%c %f %f", &op, &x, &y)!=EOF)
-            {
-                val.x = x; val.y = y;
-                tree.put(make_key(val.x, val.y), val);
-                //cout << x<<"  "<< y << endl;
-                i++;
+            file = fopen("src/sample_data.txt", "r");
+
+            if (file == NULL) {
+                cout << "\n* Invalid file address. Please check Valid File address!" << endl;
+                fclose(file);
+                break;
             }
-            cout << i << endl;
-            fclose(file);
+            else {
+                while (!feof(file))        
+                {
+                    char op; float x, y;
+                    fscanf(file, "%c %f %f\n", &op, &x, &y);
+                    val.x = x; val.y = y;
+                    tree.put(make_key(val.x, val.y), val);
+                    i++;
+                }
+                cout << "\n* Success s-LSM Building with " << i << " point data!" << endl;
+                fclose(file);
+            }                        
             break;
+
         case 's':
-            tree.save_run();
+            cout << "\n* Saving File... " << endl;
+            //tree.save_run();
+            tree.save_file();
+            cout << "\n* Success Saving!" << endl;
             break;
+
         case 'r':                                       // range query
 
             float dist;    
