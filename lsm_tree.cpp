@@ -127,33 +127,36 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     char ch_input_data[100];
     int i = idx * 4;
     FILE* fp = NULL;
+
     temp = KEY_MAX / pow(4, current->runs_list[idx]->idx_level);
+
     if (current->runs_list[idx]->idx_level < 3) {
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////
         // generate file
-        st_file_name = "runs_list/" + to_string(level_temp) + "_" + to_string(i) + ".txt";
-        //cout << "\n * " << st_file_name << endl;
+        st_file_name = "runs_list/" + to_string(level_temp) + "_" + to_string(i) + ".txt";  
         strcpy(ch_file_name, st_file_name.c_str());
-        fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+        fp = fopen(ch_file_name, "w"); 
+        //////////////////////////////////////////////////////////////////////////////////
+
         max_key = next->runs_list[i]->max_key;
+
         for (const auto& entry : current->runs_list[idx]->entries) 
         {
-            if (entry.key > max_key)
-            {
-                fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////////////////////////////<------------this 
+            /* entry's key가 runs_list의 max_key를 초과하면 알맞은 runs_list로 계속 이동 */
+            while (entry.key > max_key) {
+                fclose(fp);       //파일 포인터 닫기//////////////////////////////////////
 
                 i++;
                 max_key = next->runs_list[i]->max_key;
 
-                //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                //////////////////////////////////////////////////////////////////////////
                 // generate file
                 st_file_name = "runs_list/" + to_string(level_temp) + "_" + to_string(i) + ".txt";
-                //cout << "\n * " << st_file_name << endl;
                 strcpy(ch_file_name, st_file_name.c_str());
-                fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기
-                ////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+                fp = fopen(ch_file_name, "w");
+                //////////////////////////////////////////////////////////////////////////
             }
+
 
             /*
             entry_t tmp;
@@ -162,41 +165,40 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
             */
             next->runs_list[i]->put(entry);
             next->runs_list[i]->spatial_filter[(int)((entry.key - next->runs_list[i]->min_key) / (temp / 4))] = 1;
-            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+            //////////////////////////////////////////////////////////////////////////////
             // input to txt file
             input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
             strcpy(ch_input_data, input_data.c_str());
             fputs(ch_input_data, fp); //문자열 입력
-            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //////////////////////////////////////////////////////////////////////////////
         }
-        fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////////////////////////////<------------this 
+        fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////
     }
     else {
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////
         // generate file
         st_file_name = "runs_list/" + to_string(level_temp) + "_" + to_string(idx) + ".txt";
-        //cout << "\n * " << st_file_name << endl;
         strcpy(ch_file_name, st_file_name.c_str());
-        fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        fp = fopen(ch_file_name, "w"); 
+        //////////////////////////////////////////////////////////////////////////////////
         for (const auto& entry : current->runs_list[idx]->entries) {
             next->runs_list[idx]->put(entry);
             next->runs_list[idx]->spatial_filter[(int)((entry.key - next->runs_list[idx]->min_key) / (temp / 4))] = 1;
-            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //////////////////////////////////////////////////////////////////////////////
             // input to txt file
             input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
             strcpy(ch_input_data, input_data.c_str());
-            fputs(ch_input_data, fp); //문자열 입력
-            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            fputs(ch_input_data, fp);
+            //////////////////////////////////////////////////////////////////////////////
         }
-        fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////////////////////////////<------------this 
+        fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////
     }
 
     /*
      * if the next level does not have space for the current level,
      * recursively merge the next level downwards to create some
      */
-
     if (current->runs_list[idx]->idx_level < 3) {
         for (int i = 4 * idx; i < 4 * idx + 4; i++) {
             if (next->runs_list[i]->remaining() <= 0) {
@@ -228,6 +230,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     //cout << "\n ┗------------- [ END : Merge Down ] -------------┛\n" << endl;
 }
 
+
 void LSMTree::put(KEY_t key, VAL_t val) {
     KEY_t max_key;
     KEY_t min_key;
@@ -256,7 +259,7 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     max_key = temp / 4 - 1;
     int loop = 0;
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////
     // generate file    
     string st_file_name;        
     char ch_file_name[100];
@@ -265,50 +268,45 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     strcpy(ch_file_name, st_file_name.c_str());
     FILE* fp = NULL;
     fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////
     string input_data;
     char ch_input_data[100];
 
     for (const auto& entry : buffer.entries) 
     {
-        if (entry.key > max_key)
-        {
-            fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////////////////////////////<------------this 
+        /* entry's key가 runs_list의 max_key를 초과하면 알맞은 runs_list로 계속 이동 */
+        /* Buffer -> level 1 */
+        while (entry.key > max_key) {
+            fclose(fp);       //파일 포인터 닫기//////////////////////////////////////
 
             i++;
-            min_key = (temp / 4) * i;
-            max_key = (temp/ 4) * (i + 1) - 1;
-            // if(i==3) max_key++;
+            min_key = (temp / 4) * i;               // next level's min_key
+            max_key = (temp / 4) * (i + 1) - 1;      // next level's max_key
 
-            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            // generate file            
+            //////////////////////////////////////////////////////////////////////////
+            // generate file
             st_file_name = "runs_list/" + to_string(levels.front().runs_list[i]->idx_level) + "_" + to_string(i) + ".txt";
-            //cout << "\n * " << st_file_name << endl;
             strcpy(ch_file_name, st_file_name.c_str());
-            fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기            
-            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            fp = fopen(ch_file_name, "w");
+            //////////////////////////////////////////////////////////////////////////
         }
 
-        /*
-        entry_t tmp;
-        tmp.key = entry.key; tmp.val = entry.val;
-        levels.front().runs_list[i]->put(tmp);
-        */
+
         levels.front().runs_list[i]->put(entry);
         levels.front().runs_list[i]->spatial_filter[(int)((entry.key - levels.front().runs_list[i]->min_key) / (temp / 16))] = 1;
 
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
         // input to txt file                
         input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
         strcpy(ch_input_data, input_data.c_str());
         fputs(ch_input_data, fp); //문자열 입력        
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
     }
 
-    fclose(fp);      //파일 포인터 닫기/////////////////////////////////////////////////////<-------얘도
+    fclose(fp);      //파일 포인터 닫기////////////////////////////////////////
 
 
-    /*    *   Save Buffer's entries    */    
+    /*  Save Buffer's entries    */    
     st_file_name = "runs_list/0_Buffer.txt";
     //cout << "\n * " << st_file_name << endl;
     strcpy(ch_file_name, st_file_name.c_str());
@@ -319,10 +317,9 @@ void LSMTree::put(KEY_t key, VAL_t val) {
         strcpy(ch_input_data, input_data.c_str());
         fputs(ch_input_data, fp); //문자열 입력
     }
-    fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////////////////////////////<------------this
+    fclose(fp);       //파일 포인터 닫기////////////////////////////////////////
 
     buffer.empty();
-    //cout << buffer.entries.size() << endl;
 
     assert(buffer.put(key, val));
 }
@@ -554,7 +551,30 @@ void LSMTree::print_tree()
         cout << entry.val.x << " " << entry.val.y << " " << entry.key <<  "\n";
         i++;
     }
-    cout << "number of entry in Buffer = " << i << endl;
+    cout << "* Number of entry in Buffer = " << i << endl;
+
+
+
+    /* Print Level 1's Component */
+    set<entry_t> disk_entries;
+    vector<Level>::iterator current_level;
+    current_level = levels.begin();
+
+    for (int j = 0; j < 4; j++) {
+        i = 0;
+        cout << "\n* Disk level 1_" << j << " --------> key range : " << current_level->runs_list[j]->min_key << " ~ " << current_level->runs_list[j]->max_key << endl;
+        disk_entries = current_level->runs_list[j]->entries;
+        // Insert entry to Result
+        for (const auto& entry : disk_entries)
+        {
+            cout << entry.val.x << " " << entry.val.y << " " << entry.key << "\n";
+            i++;
+        }
+        cout << "* Number of entry in Disk 1_" << j << " = " << i << endl;
+        cout << "spatial_filter[0] : " << current_level->runs_list[j]->spatial_filter[0] << ", spatial_filter[1] : " << current_level->runs_list[j]->spatial_filter[1]\
+            << ", spatial_filter[2] : " << current_level->runs_list[j]->spatial_filter[2] << ", spatial_filter[3] : " << current_level->runs_list[j]->spatial_filter[3] << endl;
+    }   
+
 
 }
 
@@ -817,10 +837,12 @@ void LSMTree::range_query(entry_t query_point, float distance)
     set<int> Q_filter = Create_Query_filter(query_point.val, distance);
     set<int>::iterator iter;
 
-    /* // Check a number of Q_filter
-    for (iter = Q_filter.begin(); iter != Q_filter.end(); iter++) {
-        cout << *iter << endl;
-    }*/
+    /* Check Query Filter */
+    /*for (const auto& qfilter : Q_filter) {
+        cout << qfilter << "  ";
+    }
+    cout << endl;*/
+
 
     //////////// [ Range Query in Disk Level ] //////////// 
     for (int i = 0; i < DEFAULT_TREE_DEPTH; i++)
@@ -830,11 +852,13 @@ void LSMTree::range_query(entry_t query_point, float distance)
         cout << "[   X             Y             KEY          Distance         Run Index ]" << endl;
 
         if (i < 3) {
-            int temp = 0;
-            for (iter = Q_filter.begin(); iter != Q_filter.end(); iter++) {
-                int check_run = (*iter) / pow(4, 2 - i);                        // Matchting {Q_filter size and Full size}
+            int temp = -1;                                                          // 쿼리필터에 값(=숫자)가 아무거나 있으면
+            for (const auto& iter : Q_filter) {
+            //for (iter = Q_filter.begin(); iter != Q_filter.end(); iter++) {
+                //int check_run = (*iter) / pow(4, 2 - i);                    
+                int check_run = iter / pow(4, 2 - i);                               // Matchting {Q_filter size and Full size}
 
-                if (check_run != temp) {
+                if (check_run != temp) {  // 쿼리필터에 값(=숫자)가 아무거나 있으면 Range query 수행
                     // Disk Run Filtering by using Q_filter
                     if (current_level->runs_list[check_run]->spatial_filter[0] == 0 && current_level->runs_list[check_run]->spatial_filter[1] == 0 && current_level->runs_list[check_run]->spatial_filter[2] == 0 && current_level->runs_list[check_run]->spatial_filter[3] == 0) {
                         continue;
@@ -857,8 +881,10 @@ void LSMTree::range_query(entry_t query_point, float distance)
         }
         // Disk Level 4 ~
         else {
-            for (iter = Q_filter.begin(); iter != Q_filter.end(); iter++) {
-                int check_run = (*iter);
+            for (const auto& iter : Q_filter) {
+            //for (iter = Q_filter.begin(); iter != Q_filter.end(); iter++) {
+                //int check_run = (*iter) / pow(4, 2 - i);         
+                int check_run = iter;                                               // Matchting {Q_filter size and Full size}
 
                 // Disk Run Filtering by using Q_filter
                 if (current_level->runs_list[check_run]->spatial_filter[0] == 0 && current_level->runs_list[check_run]->spatial_filter[1] == 0 && current_level->runs_list[check_run]->spatial_filter[2] == 0 && current_level->runs_list[check_run]->spatial_filter[3] == 0) {
@@ -949,10 +975,12 @@ void LSMTree::KNN_query1(entry_t query_point, int k)
     //// [ Disk ] 앞뒤 2/k 만큼 돌려서 나온 최종 k개 결과값을 k_result에 input //// 
     for (int i = 0; i < DEFAULT_TREE_DEPTH; i++) {
         if (i < 3) {
-            int temp = 0;
-            for (Q_iter = Q_filter.begin(); Q_iter != Q_filter.end(); Q_iter++) {
-                int check_run = (*Q_iter) / pow(4, 2 - i);
-                if (check_run != temp) {
+            int temp = -1;                                                          // 쿼리필터에 값(=숫자)가 아무거나 있으면 Range query 수행
+            for (const auto& Q_iter : Q_filter) {
+            //for (iter = Q_filter.begin(); iter != Q_filter.end(); iter++) {
+                //int check_run = (*iter) / pow(4, 2 - i);                          // Matchting {Q_filter size and Full size}
+                int check_run = Q_iter / pow(4, 2 - i);                             // Matchting {Q_filter size and Full size}
+                if (check_run != temp) {                                            // 쿼리필터에 값(=숫자)가 아무거나 있으면 Range query 수행
 
                     if (levels[i].runs_list[check_run]->spatial_filter[0] == 0 && levels[i].runs_list[check_run]->spatial_filter[1] == 0 && levels[i].runs_list[check_run]->spatial_filter[2] == 0 && levels[i].runs_list[check_run]->spatial_filter[3] == 0) {
                         continue;
@@ -1012,8 +1040,10 @@ void LSMTree::KNN_query1(entry_t query_point, int k)
             }
         } // Disk Level 3 ~
         else {
-            for (Q_iter = Q_filter.begin(); Q_iter != Q_filter.end(); Q_iter++) {
-                int check_run = (*Q_iter);
+            for (const auto& Q_iter : Q_filter) {
+            //for (iter = Q_filter.begin(); iter != Q_filter.end(); iter++) {
+                //int check_run = (*iter) / pow(4, 2 - i);                        // Matchting {Q_filter size and Full size}
+                int check_run = Q_iter;                        // Matchting {Q_filter size and Full size}
 
                 if (levels[i].runs_list[check_run]->spatial_filter[0] == 0 && levels[i].runs_list[check_run]->spatial_filter[1] == 0 && levels[i].runs_list[check_run]->spatial_filter[2] == 0 && levels[i].runs_list[check_run]->spatial_filter[3] == 0) {
                     continue;

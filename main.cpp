@@ -18,11 +18,13 @@ void command_loop(LSMTree& tree) {
     FILE* file; 
 
     /* Ver. 1 */
+    cout << "\n* s-LSM Tree building... " << endl;
     file = fopen("SaveFile/Save_File.txt", "r");
     
     if (file == NULL) {
-        cout << "\n* Invalid file address. Please check Valid File address!" << endl;
-        fclose(file);
+        cout << "\n* Invalid file address." << endl;
+        cout << "\n* Please check Valid File address or Input new datasets by using Commend 'i'.\n " << endl;
+        //fclose(file);
     }
     else {
         while (!feof(file))
@@ -34,7 +36,7 @@ void command_loop(LSMTree& tree) {
             //tree.put(make_key(val.x, val.y), val);
             i++;
         }
-        cout << "\n* Success s-LSM Building with " << i << " point data!" << endl;
+        cout << "\n* Success s-LSM Tree building with " << i << " point data!" << endl;
         fclose(file);
     }
 
@@ -96,14 +98,13 @@ void command_loop(LSMTree& tree) {
             tree.print_tree();
             break;
 
-        case 'l':
-            cout << "\n* Loading File and Start s-LSM Building... " << endl;            
+        case 'i':
+            cout << "\n* Loading File and Start s-LSM Tree Building... " << endl;            
             FILE * file; 
             file = fopen("src/sample_data.txt", "r");
 
             if (file == NULL) {
                 cout << "\n* Invalid file address. Please check Valid File address!" << endl;
-                fclose(file);
                 break;
             }
             else {
@@ -117,7 +118,8 @@ void command_loop(LSMTree& tree) {
                 }
                 cout << "\n* Success s-LSM Building with " << i << " point data!" << endl;
                 fclose(file);
-            }                        
+            }        
+
             break;
 
         case 's':
@@ -193,10 +195,10 @@ int main(int argc, char *argv[]) {
     while ((opt = getopt(argc, argv, "b:d:f:t:r:")) != -1) {
         switch (opt) {
         case 'b':
-            buffer_num_pages = atoi(optarg);
+            buffer_num_pages = atoi(optarg);            // buffer size (ex ./lsm -b 1 )
             break;
         case 'd':
-            depth = atoi(optarg);
+            depth = atoi(optarg);                       // tree depth (ex ./lsm -d 10 )
             break;
         case 'f':
             fanout = atoi(optarg);

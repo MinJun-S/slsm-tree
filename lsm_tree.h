@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define DEFAULT_TREE_DEPTH 8
+#define DEFAULT_TREE_DEPTH 10
 #define DEFAULT_TREE_FANOUT 1
 #define DEFAULT_BUFFER_NUM_PAGES 1000
 #define DEFAULT_THREAD_COUNT 4
