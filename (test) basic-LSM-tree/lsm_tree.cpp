@@ -68,7 +68,7 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
 		Run* tmp1 = new Run(current->max_run_size, bf_bits_per_entry, cnt);
 		current->runs_list[0] = tmp1;
 
-		cout << "Run~~~> " << current->runs_list[0]->idx_level << endl;
+		cout << "Level~~~> " << current->runs_list[0]->idx_level << endl;
         current += 1;		
     }
 	
@@ -124,7 +124,15 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     fp = fopen(ch_file_name, "w"); 
     //////////////////////////////////////////////////////////////////////////////////
 
+
     max_key = next->runs_list[i]->max_key;
+
+	if (next->runs_list[i]->entries.begin()->key != 0) {
+		IO_Check = IO_Check + int(next->runs_list[i]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+		if (next->runs_list[i]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+			IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+		}
+	}
 
     for (const auto& entry : current->runs_list[idx]->entries) 
     {
@@ -143,6 +151,13 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
         //////////////////////////////////////////////////////////////////////////////
     }
     fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////
+
+	// 머지다운한 후에 추가로 더 들어있을 수 있으니 여기서 체크
+	IO_Check = IO_Check + 1 + int(next->runs_list[i]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);       // 레벨에 따라 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+	if (next->runs_list[i]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+		IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+	}
+
 
     /*
      * if the next level does not have space for the current level,
@@ -207,6 +222,7 @@ void LSMTree::put(KEY_t key, VAL_t val) {
 
     string input_data;
     char ch_input_data[100];
+	/* Buffer -> level 1 flush */
     for (const auto& entry : buffer.entries) {
 		levels.front().runs_list[i]->put(entry);
         // input to txt file
@@ -214,6 +230,7 @@ void LSMTree::put(KEY_t key, VAL_t val) {
         strcpy(ch_input_data, input_data.c_str());
         fputs(ch_input_data, fp); //문자열 입력
     }
+	IO_Check = IO_Check + 1;
     fclose(fp);       //파일 포인터 닫기////////////////////////////////////////
 
     buffer.empty();

@@ -1,3 +1,6 @@
+/*
+	실험용 basic LSM 코드 수정본
+*/
 #ifndef TYPES_H
 #define TYPES_H
 #include <stdint.h>

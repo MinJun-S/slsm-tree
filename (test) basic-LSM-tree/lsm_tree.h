@@ -1,8 +1,12 @@
+/*
+	실험용 basic LSM 코드 수정본
+*/
 #include <vector>
 #include <set>
 #include <algorithm>
 #include <utility>
 #include <iomanip>
+#include <cmath>
 
 #include "buffer.h"
 #include "level.h"
@@ -52,6 +56,7 @@ public:
     //void KNN_query2(entry_t, int);
     //set<pair<float, entry_t>> NN_range(int, int, entry_t, float);
     
+	int IO_Check;
     
 };
 

@@ -1,3 +1,6 @@
+/*
+	실험용 basic LSM 코드 수정본
+*/
 #include <iostream>
 #include <vector>
 
@@ -61,7 +64,6 @@ void command_loop(LSMTree& tree) {
     //    fclose(file);
     //}
 
-
     while (cin >> command) {
         
         switch (command) {
@@ -120,7 +122,7 @@ void command_loop(LSMTree& tree) {
                 cout << "\n* Success s-LSM Building with " << i << " point data!" << endl;
                 fclose(file);
             }        
-
+			cout << " * I/O Check = " << tree.IO_Check << endl;
             break;
 
         case 's':
