@@ -52,7 +52,7 @@ public:
     void KNN_query2(entry_t, int);
     set<pair<float, entry_t>> NN_range(int, int, entry_t, float);
     
-    
+	int IO_Check;
 };
 
 KEY_t make_key(float x, float y);

@@ -119,7 +119,7 @@ void command_loop(LSMTree& tree) {
                 cout << "\n* Success s-LSM Building with " << i << " point data!" << endl;
                 fclose(file);
             }        
-
+			cout << " * I/O Check = " << tree.IO_Check << endl;
             break;
 
         case 's':

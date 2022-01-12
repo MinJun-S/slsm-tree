@@ -85,6 +85,7 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
             }
         }
         //cout << cnt << endl;
+		cout << "Level~~~> " << current->runs_list[0]->idx_level << endl;
         current += 1;
     }
 }
@@ -111,7 +112,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     }
     else {
         //cout << "\n ┏------------- [ START : Merge Down ] -------------┓\n" << endl;
-        next = current + 1;
+        next = current + 1;		
     }
 
     /*
@@ -129,8 +130,17 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     FILE* fp = NULL;
 
     temp = KEY_MAX / pow(4, current->runs_list[idx]->idx_level);
-
+	
     if (current->runs_list[idx]->idx_level < 3) {
+
+		// I/O Check
+		if (next->runs_list[i]->entries.begin()->key != 0) {
+			IO_Check = IO_Check + 2;   // 머지다운 시 다음 런이 있으면 보는거(+1) 메모리 올린 후 다시 내리는거(+1)
+		}
+		else {
+			IO_Check = IO_Check + 1;   // 없으면 내리기만(+1)
+		}
+
         //////////////////////////////////////////////////////////////////////////////////
         // generate file
         st_file_name = "runs_list/" + to_string(level_temp) + "_" + to_string(i) + ".txt";  
@@ -148,7 +158,15 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
 
                 i++;
                 max_key = next->runs_list[i]->max_key;
-
+				
+				// I/O Check
+				if (next->runs_list[i]->entries.begin()->key != 0) {
+					IO_Check = IO_Check + 2;   // 머지다운 시 다음 런이 있으면 보는거(+1) 메모리 올린 후 다시 내리는거(+1)
+				}
+				else {
+					IO_Check = IO_Check + 1;   // 없으면 내리기만(+1)
+				}
+				
                 //////////////////////////////////////////////////////////////////////////
                 // generate file
                 st_file_name = "runs_list/" + to_string(level_temp) + "_" + to_string(i) + ".txt";
@@ -176,12 +194,22 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
         fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////
     }
     else {
+
+		// I/O Check
+		if (next->runs_list[idx]->entries.begin()->key != 0) {
+			IO_Check = IO_Check + 2;   // 머지다운 시 다음 런이 있으면 보는거(+1) 메모리 올린 후 다시 내리는거(+1)
+		}
+		else {
+			IO_Check = IO_Check + 1;   // 없으면 내리기만(+1)
+		}
+
         //////////////////////////////////////////////////////////////////////////////////
         // generate file
         st_file_name = "runs_list/" + to_string(level_temp) + "_" + to_string(idx) + ".txt";
         strcpy(ch_file_name, st_file_name.c_str());
         fp = fopen(ch_file_name, "w"); 
         //////////////////////////////////////////////////////////////////////////////////
+
         for (const auto& entry : current->runs_list[idx]->entries) {
             next->runs_list[idx]->put(entry);
             next->runs_list[idx]->spatial_filter[(int)((entry.key - next->runs_list[idx]->min_key) / (temp / 4))] = 1;
@@ -194,6 +222,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
         }
         fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////
     }
+	
 
     /*
      * if the next level does not have space for the current level,
@@ -304,20 +333,20 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     }
 
     fclose(fp);      //파일 포인터 닫기////////////////////////////////////////
-
+	IO_Check = IO_Check + 1;
 
     /*  Save Buffer's entries    */    
-    st_file_name = "runs_list/0_Buffer.txt";
-    //cout << "\n * " << st_file_name << endl;
-    strcpy(ch_file_name, st_file_name.c_str());
-    fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기
-    for (const auto& entry : buffer.entries) {
-        // input to txt file
-        input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
-        strcpy(ch_input_data, input_data.c_str());
-        fputs(ch_input_data, fp); //문자열 입력
-    }
-    fclose(fp);       //파일 포인터 닫기////////////////////////////////////////
+    //st_file_name = "runs_list/0_Buffer.txt";
+    ////cout << "\n * " << st_file_name << endl;
+    //strcpy(ch_file_name, st_file_name.c_str());
+    //fp = fopen(ch_file_name, "w"); //test파일을 w(쓰기) 모드로 열기
+    //for (const auto& entry : buffer.entries) {
+    //    // input to txt file
+    //    input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
+    //    strcpy(ch_input_data, input_data.c_str());
+    //    fputs(ch_input_data, fp); //문자열 입력
+    //}
+    //fclose(fp);       //파일 포인터 닫기////////////////////////////////////////
 
     buffer.empty();
 
