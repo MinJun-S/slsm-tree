@@ -153,7 +153,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////
 
 	// 머지다운한 후에 추가로 더 들어있을 수 있으니 여기서 체크
-	IO_Check = IO_Check + 1 + int(next->runs_list[i]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);       // 레벨에 따라 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+	IO_Check = IO_Check + int(next->runs_list[i]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);       // 레벨에 따라 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
 	if (next->runs_list[i]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
 		IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
 	}
