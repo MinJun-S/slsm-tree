@@ -589,20 +589,20 @@ void LSMTree::print_tree()
     vector<Level>::iterator current_level;
     current_level = levels.begin();
 
-    for (int j = 0; j < 4; j++) {
-        i = 0;
-        cout << "\n* Disk level 1_" << j << " --------> key range : " << current_level->runs_list[j]->min_key << " ~ " << current_level->runs_list[j]->max_key << endl;
-        disk_entries = current_level->runs_list[j]->entries;
-        // Insert entry to Result
-        for (const auto& entry : disk_entries)
-        {
-            cout << entry.val.x << " " << entry.val.y << " " << entry.key << "\n";
-            i++;
-        }
-        cout << "* Number of entry in Disk 1_" << j << " = " << i << endl;
-        cout << "spatial_filter[0] : " << current_level->runs_list[j]->spatial_filter[0] << ", spatial_filter[1] : " << current_level->runs_list[j]->spatial_filter[1]\
-            << ", spatial_filter[2] : " << current_level->runs_list[j]->spatial_filter[2] << ", spatial_filter[3] : " << current_level->runs_list[j]->spatial_filter[3] << endl;
-    }   
+    //for (int j = 0; j < 4; j++) {
+    //    i = 0;
+    //    cout << "\n* Disk level 1_" << j << " --------> key range : " << current_level->runs_list[j]->min_key << " ~ " << current_level->runs_list[j]->max_key << endl;
+    //    disk_entries = current_level->runs_list[j]->entries;
+    //    // Insert entry to Result
+    //    for (const auto& entry : disk_entries)
+    //    {
+    //        cout << entry.val.x << " " << entry.val.y << " " << entry.key << "\n";
+    //        i++;
+    //    }
+    //    cout << "* Number of entry in Disk 1_" << j << " = " << i << endl;
+    //    cout << "spatial_filter[0] : " << current_level->runs_list[j]->spatial_filter[0] << ", spatial_filter[1] : " << current_level->runs_list[j]->spatial_filter[1]\
+    //        << ", spatial_filter[2] : " << current_level->runs_list[j]->spatial_filter[2] << ", spatial_filter[3] : " << current_level->runs_list[j]->spatial_filter[3] << endl;
+    //}   
 
 
 }
