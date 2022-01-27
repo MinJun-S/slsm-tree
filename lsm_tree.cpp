@@ -129,17 +129,17 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     int i = idx * 4;
     FILE* fp = NULL;
 
-    temp = KEY_MAX / pow(4, current->runs_list[idx]->idx_level);
 	
     if (current->runs_list[idx]->idx_level < 3) {
+	temp = KEY_MAX / pow(4, current->runs_list[idx]->idx_level);    // 공간필터 알맞게 계산용
 
-		// I/O Check
-		if (next->runs_list[i]->entries.begin()->key != 0) {
-			IO_Check = IO_Check + 2;   // 머지다운 시 다음 런이 있으면 보는거(+1) 메모리 올린 후 다시 내리는거(+1)
-		}
-		else {
-			IO_Check = IO_Check + 1;   // 없으면 내리기만(+1)
-		}
+	// I/O Check
+	if (next->runs_list[i]->entries.begin()->key != 0) {
+		IO_Check = IO_Check + 2;   // 머지다운 시 다음 런이 있으면 보는거(+1) 메모리 올린 후 다시 내리는거(+1)
+	}
+	else {
+		IO_Check = IO_Check + 1;   // 없으면 내리기만(+1)
+	}
 
         //////////////////////////////////////////////////////////////////////////////////
         // generate file
@@ -159,13 +159,13 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
                 i++;
                 max_key = next->runs_list[i]->max_key;
 				
-				// I/O Check
-				if (next->runs_list[i]->entries.begin()->key != 0) {
-					IO_Check = IO_Check + 2;   // 머지다운 시 다음 런이 있으면 보는거(+1) 메모리 올린 후 다시 내리는거(+1)
-				}
-				else {
-					IO_Check = IO_Check + 1;   // 없으면 내리기만(+1)
-				}
+		// I/O Check
+		if (next->runs_list[i]->entries.begin()->key != 0) {
+			IO_Check = IO_Check + 2;   // 머지다운 시 다음 런이 있으면 보는거(+1) 메모리 올린 후 다시 내리는거(+1)
+		}
+		else {
+			IO_Check = IO_Check + 1;   // 없으면 내리기만(+1)
+		}
 				
                 //////////////////////////////////////////////////////////////////////////
                 // generate file
@@ -194,14 +194,15 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
         fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////
     }
     else {
+	temp = KEY_MAX / pow(4, 2);    // 공간필터 알맞게 계산용 (임계 레벨 넘어가면 분할X 임계값만 2배수)
 
-		// I/O Check
-		if (next->runs_list[idx]->entries.begin()->key != 0) {
-			IO_Check = IO_Check + 2;   // 머지다운 시 다음 런이 있으면 보는거(+1) 메모리 올린 후 다시 내리는거(+1)
-		}
-		else {
-			IO_Check = IO_Check + 1;   // 없으면 내리기만(+1)
-		}
+	// I/O Check
+	if (next->runs_list[idx]->entries.begin()->key != 0) {
+		IO_Check = IO_Check + 2;   // 머지다운 시 다음 런이 있으면 보는거(+1) 메모리 올린 후 다시 내리는거(+1)
+	}
+	else {
+		IO_Check = IO_Check + 1;   // 없으면 내리기만(+1)
+	}
 
         //////////////////////////////////////////////////////////////////////////////////
         // generate file
