@@ -120,6 +120,7 @@ void command_loop(LSMTree& tree) {
                 fclose(file);
             }        
 			cout << " * I/O Check = " << tree.IO_Check << endl;
+            tree.IO_Check = 0;
             break;
 
         case 's':
@@ -147,6 +148,9 @@ void command_loop(LSMTree& tree) {
             tree.range_query(entry, dist);
 
             tree.reset_Q_filter();
+
+            cout << " * I/O Check = " << tree.IO_Check << endl;
+            tree.IO_Check = 0;
             
             break;
         case 'k':                                       // knn1 query
@@ -160,6 +164,11 @@ void command_loop(LSMTree& tree) {
 
             tree.KNN_query1(entry, k);
 
+            tree.reset_Q_filter();
+
+            cout << " * I/O Check = " << tree.IO_Check << endl;
+            tree.IO_Check = 0;
+
             break;
 
         case 'n':                                       // knn2 query
@@ -172,6 +181,11 @@ void command_loop(LSMTree& tree) {
             entry.key = make_key(val.x, val.y);
 
             tree.KNN_query2(entry, k);
+
+            tree.reset_Q_filter();
+
+            cout << " * I/O Check = " << tree.IO_Check << endl;
+            tree.IO_Check = 0;
 
             break;
 

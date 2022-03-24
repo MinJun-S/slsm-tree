@@ -131,15 +131,19 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
 
 	
     if (current->runs_list[idx]->idx_level < 3) {
-	temp = KEY_MAX / pow(4, current->runs_list[idx]->idx_level);    // 공간필터 알맞게 계산용
+	    temp = KEY_MAX / pow(4, current->runs_list[idx]->idx_level);    // 공간필터 알맞게 계산용
 
-	// I/O Check
-	if (next->runs_list[i]->entries.begin()->key != 0) {
-		IO_Check = IO_Check + 2;   // 머지다운 시 다음 런이 있으면 보는거(+1) 메모리 올린 후 다시 내리는거(+1)
-	}
-	else {
-		IO_Check = IO_Check + 1;   // 없으면 내리기만(+1)
-	}
+	    // I/O Check
+	    if (next->runs_list[i]->entries.begin()->key != 0) {
+            IO_Check = IO_Check + 2 + int(next->runs_list[i]->entries.size() / DEFAULT_BUFFER_NUM_PAGES) * 2;    
+            // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+            if (next->runs_list[i]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+                IO_Check = IO_Check + 2;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+            }
+	    }
+	    else {
+		    IO_Check = IO_Check + 2;   // 없으면 내리기만(+1)
+	    }
 
         //////////////////////////////////////////////////////////////////////////////////
         // generate file
@@ -159,13 +163,14 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
                 i++;
                 max_key = next->runs_list[i]->max_key;
 				
-		// I/O Check
-		if (next->runs_list[i]->entries.begin()->key != 0) {
-			IO_Check = IO_Check + 2;   // 머지다운 시 다음 런이 있으면 보는거(+1) 메모리 올린 후 다시 내리는거(+1)
-		}
-		else {
-			IO_Check = IO_Check + 1;   // 없으면 내리기만(+1)
-		}
+		        // I/O Check
+                if (entry.key < max_key) {
+                    IO_Check = IO_Check + 2 + int(next->runs_list[i]->entries.size() / DEFAULT_BUFFER_NUM_PAGES) * 2;
+                    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+                    if (next->runs_list[i]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+                        IO_Check = IO_Check + 2;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+                    }
+                }
 				
                 //////////////////////////////////////////////////////////////////////////
                 // generate file
@@ -194,15 +199,19 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
         fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////
     }
     else {
-	temp = KEY_MAX / pow(4, 2);    // 공간필터 알맞게 계산용 (임계 레벨 넘어가면 분할X 임계값만 2배수)
+	    temp = KEY_MAX / pow(4, 2);    // 공간필터 알맞게 계산용 (임계 레벨 넘어가면 분할X 임계값만 2배수)
 
-	// I/O Check
-	if (next->runs_list[idx]->entries.begin()->key != 0) {
-		IO_Check = IO_Check + 2;   // 머지다운 시 다음 런이 있으면 보는거(+1) 메모리 올린 후 다시 내리는거(+1)
-	}
-	else {
-		IO_Check = IO_Check + 1;   // 없으면 내리기만(+1)
-	}
+	    // I/O Check
+        if (entry.key < max_key) {
+            IO_Check = IO_Check + int(current->runs_list[idx]->entries.size() / DEFAULT_BUFFER_NUM_PAGES) * 2 + int(next->runs_list[idx]->entries.size() / DEFAULT_BUFFER_NUM_PAGES) * 2;
+            // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+            if (next->runs_list[idx]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+                IO_Check = IO_Check + 2;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+            }
+            if (current->runs_list[idx]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+                IO_Check = IO_Check + 2;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+            }
+        }
 
         //////////////////////////////////////////////////////////////////////////////////
         // generate file
@@ -302,6 +311,13 @@ void LSMTree::put(KEY_t key, VAL_t val) {
     string input_data;
     char ch_input_data[100];
 
+    if (levels.front().runs_list[i]->entries.begin()->key < max_key) {
+        IO_Check = IO_Check + 1 + int(levels.front().runs_list[i]->entries.size() / DEFAULT_BUFFER_NUM_PAGES) * 2;    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+        if (levels.front().runs_list[i]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+            IO_Check = IO_Check + 2;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+        }
+    }
+
     for (const auto& entry : buffer.entries) 
     {
         /* entry's key가 runs_list의 max_key를 초과하면 알맞은 runs_list로 계속 이동 */
@@ -319,8 +335,14 @@ void LSMTree::put(KEY_t key, VAL_t val) {
             strcpy(ch_file_name, st_file_name.c_str());
             fp = fopen(ch_file_name, "w");
             //////////////////////////////////////////////////////////////////////////
-        }
 
+            if (entry.key < max_key) {
+                IO_Check = IO_Check + 1 + int(levels.front().runs_list[i]->entries.size() / DEFAULT_BUFFER_NUM_PAGES) * 2;    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+                if (levels.front().runs_list[i]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+                    IO_Check = IO_Check + 2;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+                }
+            }
+        }
 
         levels.front().runs_list[i]->put(entry);
         levels.front().runs_list[i]->spatial_filter[(int)((entry.key - levels.front().runs_list[i]->min_key) / (temp / 16))] = 1;
@@ -329,12 +351,11 @@ void LSMTree::put(KEY_t key, VAL_t val) {
         // input to txt file                
         input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
         strcpy(ch_input_data, input_data.c_str());
-        fputs(ch_input_data, fp); //문자열 입력        
+        fputs(ch_input_data, fp); //문자열 입력
         ///////////////////////////////////////////////////////////////////////
     }
 
     fclose(fp);      //파일 포인터 닫기////////////////////////////////////////
-	IO_Check = IO_Check + 1;
 
     /*  Save Buffer's entries    */    
     //st_file_name = "runs_list/0_Buffer.txt";
@@ -904,6 +925,12 @@ void LSMTree::range_query(entry_t query_point, float distance)
                         }
                     }
                     temp = check_run;
+
+                    IO_Check = IO_Check + int(current_level->runs_list[check_run]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+                    if (current_level->runs_list[check_run]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+                        IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+                    }
+
                     cout << "-------------------------------------------------------------------------------------" << endl;
                 }
             }    
@@ -930,6 +957,12 @@ void LSMTree::range_query(entry_t query_point, float distance)
                         cout << setw(9) << entry.val.x << "  |  " << setw(9) << entry.val.y << "  |  " << setw(11) << entry.key << "  |  " << setw(9) << Compute_distance(query_point, entry) << "      | run index : " << check_run << endl;
                     }
                 }
+
+                IO_Check = IO_Check + int(current_level->runs_list[check_run]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+                if (current_level->runs_list[check_run]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+                    IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+                }
+
                 cout << "-------------------------------------------------------------------------------------" << endl;
             }    
             current_level += 1;
@@ -1066,6 +1099,11 @@ void LSMTree::KNN_query1(entry_t query_point, int k)
                     }
 
                     temp = check_run;
+
+                    IO_Check = IO_Check + int(levels[i].runs_list[check_run]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+                    if (levels[i].runs_list[check_run]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+                        IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+                    }
                 }
             }
         } // Disk Level 3 ~
@@ -1124,6 +1162,11 @@ void LSMTree::KNN_query1(entry_t query_point, int k)
                         temp_result.clear();
                         break;
                     }
+                }
+
+                IO_Check = IO_Check + int(levels[i].runs_list[check_run]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+                if (levels[i].runs_list[check_run]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+                    IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
                 }
             }
         }
@@ -1258,6 +1301,11 @@ void LSMTree::KNN_query2(entry_t query_point, int k) {
                     }
 
                     temp = check_run;
+
+                    IO_Check = IO_Check + int(levels[i].runs_list[check_run]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+                    if (levels[i].runs_list[check_run]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+                        IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+                    }
                 }
             }
         } // Disk Level 3 ~
@@ -1314,6 +1362,11 @@ void LSMTree::KNN_query2(entry_t query_point, int k) {
                         temp_result.clear();
                         break;
                     }
+                }
+
+                IO_Check = IO_Check + int(levels[i].runs_list[check_run]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+                if (levels[i].runs_list[check_run]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+                    IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
                 }
             }
         }
