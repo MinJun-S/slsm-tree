@@ -48,12 +48,12 @@ public:
     //set<int> Create_Query_filter(VAL_t, float);           // range query
     //void reset_Q_filter();
     //float Compute_Overlap(VAL_t, VAL_t, VAL_t, VAL_t);
-    //
-    //void range_query(entry_t, float);
-    //float Compute_distance(entry_t, entry_t);
 
-    //void KNN_query1(entry_t, int);
-    //void KNN_query2(entry_t, int);
+    void range_query(entry_t, float);
+    float Compute_distance(entry_t, entry_t);
+
+    void KNN_query1(entry_t, int);
+    void KNN_query2(entry_t, int);
     //set<pair<float, entry_t>> NN_range(int, int, entry_t, float);
     
 	int IO_Check;

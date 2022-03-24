@@ -123,6 +123,7 @@ void command_loop(LSMTree& tree) {
                 fclose(file);
             }        
 			cout << " * I/O Check = " << tree.IO_Check << endl;
+            tree.IO_Check = 0;
             break;
 
         case 's':
@@ -135,6 +136,53 @@ void command_loop(LSMTree& tree) {
 		case 'a':
 			//tree.save_run();
 			break;
+
+        case 'r':                                       // range query
+
+            float dist;
+            entry_t entry;
+            cout << "* Input x, y and range_distance " << endl;
+            cin >> val.x >> val.y >> dist;
+            entry.val.x = val.x;
+            entry.val.y = val.y;
+            entry.key = make_key(val.x, val.y);
+
+            KEY_t Lower; KEY_t Upper;
+            Lower = make_key(entry.val.x - dist, entry.val.y - dist);
+            Upper = make_key(entry.val.x + dist, entry.val.y + dist);
+            cout << "  " << endl;
+
+            tree.range_query(entry, dist);
+            cout << " * I/O Check = " << tree.IO_Check << endl;
+            tree.IO_Check = 0;
+            break;
+        case 'k':                                       // knn1 query
+            //entry_t entry;
+            int k;
+            cout << "* (kNN1) input x, y and k " << endl;
+            cin >> val.x >> val.y >> k;
+            entry.val.x = val.x;
+            entry.val.y = val.y;
+            entry.key = make_key(val.x, val.y);
+
+            tree.KNN_query1(entry, k);
+            cout << " * I/O Check = " << tree.IO_Check << endl;
+            tree.IO_Check = 0;
+            break;
+
+        case 'n':                                       // knn2 query
+        //entry_t entry;
+            //int k;
+            cout << "* (kNN2) input x, y and k " << endl;
+            cin >> val.x >> val.y >> k;
+            entry.val.x = val.x;
+            entry.val.y = val.y;
+            entry.key = make_key(val.x, val.y);
+
+            tree.KNN_query2(entry, k);
+            cout << " * I/O Check = " << tree.IO_Check << endl;
+            tree.IO_Check = 0;
+            break;
 
         default:
             cout << "* Please Insert Valid Command ! " << endl;

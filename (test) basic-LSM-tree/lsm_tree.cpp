@@ -128,10 +128,13 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     max_key = next->runs_list[i]->max_key;
 
 	if (next->runs_list[i]->entries.begin()->key != 0) {
-		IO_Check = IO_Check + int(next->runs_list[i]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+		IO_Check = IO_Check + 2 * int(current->runs_list[i]->entries.size() / DEFAULT_BUFFER_NUM_PAGES) + 2 * int(next->runs_list[i]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
 		if (next->runs_list[i]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
-			IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+			IO_Check = IO_Check + 2;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
 		}
+        if (current->runs_list[i]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+            IO_Check = IO_Check + 2;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+        }
 	}
 
     for (const auto& entry : current->runs_list[idx]->entries) 
@@ -152,13 +155,6 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     }
     fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////
 
-	// 머지다운한 후에 추가로 더 들어있을 수 있으니 여기서 체크
-	IO_Check = IO_Check + int(next->runs_list[i]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);       // 레벨에 따라 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
-	if (next->runs_list[i]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
-		IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
-	}
-
-
     /*
      * if the next level does not have space for the current level,
      * recursively merge the next level downwards to create some
@@ -168,7 +164,6 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
         assert(next->runs_list[i]->remaining() > 0);
     }
     
-
     /*
      * Clear the current level to delete the old (now redundant) entry files.
      */
@@ -230,7 +225,15 @@ void LSMTree::put(KEY_t key, VAL_t val) {
         strcpy(ch_input_data, input_data.c_str());
         fputs(ch_input_data, fp); //문자열 입력
     }
-	IO_Check = IO_Check + 1;
+
+    IO_Check = IO_Check + 1;
+    if (levels.front().runs_list[0]->entries.begin()->key != 0) {
+        IO_Check = IO_Check + 2 * int(levels.front().runs_list[0]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);
+        if (levels.front().runs_list[0]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+            IO_Check = IO_Check + 2;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+        }
+    }
+
     fclose(fp);       //파일 포인터 닫기////////////////////////////////////////
 
     buffer.empty();
@@ -604,3 +607,307 @@ void LSMTree::save_file()
     fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////////////////////////////<------------this 
 }
 
+void LSMTree::range_query(entry_t query_point, float distance)
+{
+    vector<entry_t> range_result;
+
+    entry_t Lower; entry_t Upper;                                   // Lower, Upper of query_point's Query Range
+
+    vector<Level>::iterator current_level;
+    current_level = levels.begin();
+
+    Lower.val.x = query_point.val.x - distance; Lower.val.y = query_point.val.y - distance;
+    Upper.val.x = query_point.val.x + distance; Upper.val.y = query_point.val.y + distance;
+
+    Lower.key = make_key(Lower.val.x, Lower.val.y);
+    Upper.key = make_key(Upper.val.x, Upper.val.y);
+
+    set<entry_t> disk_entries;
+
+    //////////// [ Range Query in Memory ] ////////////     
+    cout << "\n* Buffer Result " << endl;
+    cout << "-------------------------------------------------------------------------------------" << endl;
+    cout << "[   X             Y             KEY          Distance ]" << endl;
+
+    cout << left;
+    for (const auto& entry : buffer.entries)
+    {
+        if (Compute_distance(query_point, entry) < distance) {
+            range_result.push_back(entry);
+            cout << setw(9) << entry.val.x << "  |  " << setw(9) << entry.val.y << "  |  " << setw(11) << entry.key << "  |  " << setw(9) << Compute_distance(query_point, entry) << endl;
+        }
+    }
+
+    set<int>::iterator iter;
+
+    //////////// [ Range Query in Disk Level ] //////////// 
+    for (int i = 0; i < DEFAULT_TREE_DEPTH; i++)
+    {
+        cout << "\n* Disk Level " << i + 1 << " Result " << endl;
+        cout << "-------------------------------------------------------------------------------------" << endl;
+        cout << "[   X             Y             KEY          Distance         Run Index ]" << endl;
+
+        //disk_entries = current_level->runs_list[0]->entries;
+        // Insert entry to Result
+        disk_entries = levels[i].runs_list[0]->entries;
+        for (const auto& entry : disk_entries)
+        {
+            if (Compute_distance(query_point, entry) < distance) {
+                range_result.push_back(entry);
+                cout << setw(9) << entry.val.x << "  |  " << setw(9) << entry.val.y << "  |  " << setw(11) << entry.key << "  |  " << setw(9) << Compute_distance(query_point, entry) << endl;
+            }
+        }
+
+        IO_Check = IO_Check + int(levels[i].runs_list[0]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+        if (levels[i].runs_list[0]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+            IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+        }
+
+        cout << "-------------------------------------------------------------------------------------" << endl;
+        //current_level += 1;
+    }
+}
+
+float LSMTree::Compute_distance(entry_t query_point, entry_t point) {
+    float distance;
+
+    distance = sqrt(pow(point.val.x - query_point.val.x, 2) + pow(point.val.y - query_point.val.y, 2));
+    return distance;
+}
+
+//// [ Top - Down ] ////
+void LSMTree::KNN_query1(entry_t query_point, int k)
+{
+    entry_t entry;
+    set<pair<float, entry_t>> k_result;                             // k Result set
+    float distance = 0;
+    float compute_d = 8.656678713232676;
+    set<int> Q_filter;
+    set<entry_t>::iterator l_k; set<entry_t>::iterator u_k;
+    set<entry_t>::iterator k_temp;
+
+    set<pair<float, entry_t>> temp_result;
+    set<int>::iterator Q_iter;
+    set<pair<float, entry_t>>::iterator iter_result;
+
+    l_k = u_k = buffer.entries.lower_bound(query_point);
+
+    // 앞뒤로 k/2씩 이동해서 k개 범위 도출 
+    for (int i = 0; i <= k; i++) {
+        if (compute_d > Compute_distance(query_point, *l_k)) {
+            compute_d = Compute_distance(query_point, *l_k);
+            k_temp = l_k;
+        }
+        if (compute_d > Compute_distance(query_point, *u_k)) {
+            compute_d = Compute_distance(query_point, *u_k);
+            k_temp = u_k;
+        }
+        l_k--;
+        u_k++;
+    }
+
+    // 2/k만큼 query_point로부터 가까운 진짜 LB, UB설정
+    l_k = u_k = k_temp;
+    for (int i = 0; i <= k; i++) {
+        temp_result.insert({ Compute_distance(query_point, *u_k) ,*u_k });
+        temp_result.insert({ Compute_distance(query_point, *l_k) ,*l_k });
+        l_k--;
+        u_k++;
+    }
+
+    //// [ Buffer ] 앞뒤 2/k 만큼 돌려서 나온 최종 k개 결과값을 k_result에 input //// 
+    set<pair<float, entry_t>>::iterator temp_set;
+
+    for (iter_result = temp_result.begin(); iter_result != temp_result.end(); iter_result++) {
+        if (k_result.size() < k) {
+            k_result.insert({ Compute_distance(query_point, (*iter_result).second), (*iter_result).second });
+        }
+        else {
+            temp_set = k_result.end();
+            temp_set--;
+            distance = (*temp_set).first;
+            temp_result.clear();
+            break;
+        }
+    }
+
+    //// [ Disk ] 앞뒤 2/k 만큼 돌려서 나온 최종 k개 결과값을 k_result에 input //// 
+    for (int i = 0; i < DEFAULT_TREE_DEPTH; i++) {
+        l_k = u_k = levels[i].runs_list[0]->entries.lower_bound(query_point);
+
+        IO_Check = IO_Check + int(levels[i].runs_list[0]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+        if (levels[i].runs_list[0]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+            IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+        }
+
+        // 앞뒤로 k/2씩 이동해서 k개 출력
+        compute_d = 8.656678713232676;
+        for (int i = 0; i <= k; i++) {
+            if (compute_d > Compute_distance(query_point, *l_k)) {
+                compute_d = Compute_distance(query_point, *l_k);
+                k_temp = l_k;
+            }
+            if (compute_d > Compute_distance(query_point, *u_k)) {
+                compute_d = Compute_distance(query_point, *u_k);
+                k_temp = u_k;
+            }
+            l_k--;
+            u_k++;
+        }
+        l_k = u_k = k_temp;
+        compute_d = 0;
+        for (int i = 0; i <= k; i++) {
+            temp_result.insert({ Compute_distance(query_point, *u_k) ,*u_k });
+            temp_result.insert({ Compute_distance(query_point, *l_k) ,*l_k });
+            l_k--;
+            u_k++;
+        }
+
+        for (iter_result = temp_result.begin(); iter_result != temp_result.end(); iter_result++) {
+            if ((*iter_result).first < distance) {
+                k_result.insert(*iter_result);
+
+                if (k_result.size() > k) {
+                    temp_set = k_result.end();
+                    temp_set--;
+                    k_result.erase(*temp_set);
+                }
+
+                temp_set = k_result.end();
+                temp_set--;
+                distance = (*temp_set).first;
+            }
+            else {
+                temp_result.clear();
+                break;
+            }
+        }
+    }
+
+    //return k_result;
+    cout << "\n* kNN Result " << endl;
+    cout << "-------------------------------------------------------------------------------------" << endl;
+    cout << "[     X             Y             KEY          Distance ]" << endl;
+    cout << left;
+    for (auto it = k_result.begin(); it != k_result.end(); it++) {
+        cout << setw(9) << (*it).second.val.x << "  |  " << setw(9) << (*it).second.val.y << "  |  " << setw(11) << (*it).second.key << "  |  " << setw(9) << (*it).first << endl;
+    }
+}
+
+//// [ Bottom - Up ] ////
+void LSMTree::KNN_query2(entry_t query_point, int k) {
+    entry_t entry;
+    set<pair<float, entry_t>> k_result;                             // k Result set
+    float distance = 0;
+    float compute_d = 8.656678713232676;
+    set<int> Q_filter;
+    set<entry_t>::iterator l_k; set<entry_t>::iterator u_k;
+    set<entry_t>::iterator k_temp;
+
+    set<pair<float, entry_t>> temp_result;
+    set<int>::iterator Q_iter;
+    set<pair<float, entry_t>>::iterator iter_result;
+
+    l_k = u_k = buffer.entries.lower_bound(query_point);
+
+    // 앞뒤로 k/2씩 이동해서 k개 범위 도출 
+    for (int i = 0; i <= k; i++) {
+        if (compute_d > Compute_distance(query_point, *l_k)) {
+            compute_d = Compute_distance(query_point, *l_k);
+            k_temp = l_k;
+        }
+        if (compute_d > Compute_distance(query_point, *u_k)) {
+            compute_d = Compute_distance(query_point, *u_k);
+            k_temp = u_k;
+        }
+        l_k--;
+        u_k++;
+    }
+
+    // 2/k만큼 query_point로부터 가까운 진짜 LB, UB설정
+    l_k = u_k = k_temp;
+    for (int i = 0; i <= k; i++) {
+        temp_result.insert({ Compute_distance(query_point, *u_k) ,*u_k });
+        temp_result.insert({ Compute_distance(query_point, *l_k) ,*l_k });
+        l_k--;
+        u_k++;
+    }
+
+    //// [ Buffer ] 앞뒤 2/k 만큼 돌려서 나온 최종 k개 결과값을 k_result에 input //// 
+    set<pair<float, entry_t>>::iterator temp_set;
+
+    for (iter_result = temp_result.begin(); iter_result != temp_result.end(); iter_result++) {
+        if (k_result.size() < k) {
+            k_result.insert({ Compute_distance(query_point, (*iter_result).second), (*iter_result).second });
+        }
+        else {
+            temp_set = k_result.end();
+            temp_set--;
+            distance = (*temp_set).first;
+            temp_result.clear();
+            break;
+        }
+    }
+
+    //// [ Disk ] 앞뒤 2/k 만큼 돌려서 나온 최종 k개 결과값을 k_result에 input //// 
+    for (int i = DEFAULT_TREE_DEPTH - 1; i >= 0; i--) {
+        l_k = u_k = levels[i].runs_list[0]->entries.lower_bound(query_point);
+
+        IO_Check = IO_Check + int(levels[i].runs_list[0]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+        if (levels[i].runs_list[0]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+            IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+        }
+
+        // 앞뒤로 k/2씩 이동해서 k개 출력
+        compute_d = 8.656678713232676;
+        for (int i = 0; i <= k; i++) {
+            if (compute_d > Compute_distance(query_point, *l_k)) {
+                compute_d = Compute_distance(query_point, *l_k);
+                k_temp = l_k;
+            }
+            if (compute_d > Compute_distance(query_point, *u_k)) {
+                compute_d = Compute_distance(query_point, *u_k);
+                k_temp = u_k;
+            }
+            l_k--;
+            u_k++;
+        }
+        l_k = u_k = k_temp;
+        compute_d = 0;
+        for (int i = 0; i <= k; i++) {
+            temp_result.insert({ Compute_distance(query_point, *u_k) ,*u_k });
+            temp_result.insert({ Compute_distance(query_point, *l_k) ,*l_k });
+            l_k--;
+            u_k++;
+        }
+
+        for (iter_result = temp_result.begin(); iter_result != temp_result.end(); iter_result++) {
+            if ((*iter_result).first < distance) {
+                k_result.insert(*iter_result);
+
+                if (k_result.size() > k) {
+                    temp_set = k_result.end();
+                    temp_set--;
+                    k_result.erase(*temp_set);
+                }
+
+                temp_set = k_result.end();
+                temp_set--;
+                distance = (*temp_set).first;
+            }
+            else {
+                temp_result.clear();
+                break;
+            }
+        }
+    }
+
+    //return k_result;
+    cout << "\n* kNN Result " << endl;
+    cout << "-------------------------------------------------------------------------------------" << endl;
+    cout << "[     X             Y             KEY          Distance ]" << endl;
+    cout << left;
+    for (auto it = k_result.begin(); it != k_result.end(); it++) {
+        cout << setw(9) << (*it).second.val.x << "  |  " << setw(9) << (*it).second.val.y << "  |  " << setw(11) << (*it).second.key << "  |  " << setw(9) << (*it).first << endl;
+    }
+}
