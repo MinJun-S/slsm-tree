@@ -1,5 +1,4 @@
 #include <iostream>
-#include <vector>
 
 #include "lsm_tree.h"
 #include "sys.h"
@@ -22,8 +21,8 @@ void command_loop(LSMTree& tree) {
     file = fopen("SaveFile/Save_File.txt", "r");
     
     if (file == NULL) {
-        cout << "\n* Invalid file address." << endl;
-        cout << "\n* Please check Valid File address or Input new datasets by using Commend 'i'.\n " << endl;
+        cout << "\n* Invalid Saved FILE Address. Please check Valid Saved File address! " << endl;
+        cout << "     OR Input new datasets by using Commend 'i'.\n " << endl;
         //fclose(file);
     }
     else {
@@ -61,8 +60,12 @@ void command_loop(LSMTree& tree) {
     //    fclose(file);
     //}
 
+	cout << "* Please insert command" << endl;
+	cout << "[ 1. p : put 1 data,   2. i : put File data,   3. s : save all data,   4. t : print tree ]" << endl;
+	cout << "[ 5. r : range query,   6. k : kNN1 query,   7. n : kNN2 query,   8. b : Bulk-Loading ]\n" << endl;
+
     while (cin >> command) {
-        
+
         switch (command) {
         case 'p':
             cin >> val.x>>val.y;
@@ -104,7 +107,7 @@ void command_loop(LSMTree& tree) {
             file = fopen("src/sample_data.txt", "r");
 
             if (file == NULL) {
-                cout << "\n* Invalid file address. Please check Valid File address!" << endl;
+                cout << "\n* Invalid file address to input data. Please check Valid File address!" << endl;
                 break;
             }
             else {
@@ -118,6 +121,7 @@ void command_loop(LSMTree& tree) {
                 }
                 cout << "\n* Success s-LSM Building with " << i << " point data!" << endl;
                 fclose(file);
+				i = 0;
             }        
 			cout << " * I/O Check = " << tree.IO_Check << endl;
             tree.IO_Check = 0;
@@ -172,7 +176,7 @@ void command_loop(LSMTree& tree) {
             break;
 
         case 'n':                                       // knn2 query
-        //entry_t entry;
+			//entry_t entry;
             //int k;
             cout << "* (kNN2) input x, y and k " << endl;
             cin >> val.x >> val.y >> k;
@@ -189,10 +193,26 @@ void command_loop(LSMTree& tree) {
 
             break;
 
+		case 'b':
+
+			// i랑 다르게 메모리에 put()아니고 마지막 레벨의 run에 put()해야함
+
+			// <여기> 여기 있는 코드를 벌크로딩에서 
+			// 1. 데이터 넣을 때 또는 위로 Flush할 때 해당 Run(=컴포넌트)를 inp_file.open("example.txt");로 하면 되는거고
+			// 2. Merge할 때 createRAMFiles() 랑 mergeFiles()하면 될듯
+
+			tree.BulkLoading_query();
+
+			break;
+
         default:
-            cout << "* Please Insert Valid Command ! " << endl;
+            cout << "* Please Insert Valid Command!" << endl;
             //die("Invalid command.");
         }
+
+		cout << "\n* Please insert command" << endl;
+		cout << "[ 1. p : put 1 data,   2. i : put File data,   3. s : save all data,   4. t : print tree ]" << endl;
+		cout << "[ 5. r : range query,   6. k : kNN1 query,   7. n : kNN2 query,   8. b : Bulk-Loading ]\n" << endl;
     }
 }
 

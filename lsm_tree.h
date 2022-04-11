@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <utility>
 #include <iomanip>
+#include <bits/stdc++.h>
+#include <fstream>
+#include <string>
 
 #include "buffer.h"
 #include "level.h"
@@ -51,8 +54,32 @@ public:
     void KNN_query1(entry_t, int);
     void KNN_query2(entry_t, int);
     set<pair<float, entry_t>> NN_range(int, int, entry_t, float);
-    
+
+	void BulkLoading_query();	
+	vector<string> split(string, char);
+	void createRAMFiles(ifstream &, int, int &); // , vector<Level>::iterator);
+	void mergeFiles(int &); // , vector<Level>::iterator);
+	//void merge_up(vector<Level>::iterator, int);
+
 	int IO_Check;
+
+	class Node {
+	public:
+		entry_t element;			
+		int index;					// external한 txt파일 안에서 라인 넘버
+		Node(entry_t ele, int idx) {
+			element = ele;
+			index = idx;
+		}
+	};
+
+	class cmp {
+	public:
+		bool operator() (Node l, Node r) {
+			return l.element.key > r.element.key;
+		}
+	};
+
 };
 
 KEY_t make_key(float x, float y);

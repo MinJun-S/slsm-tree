@@ -4,6 +4,8 @@
 #include <map>
 #include <cmath>
 #include <string>
+#include <bits/stdc++.h>
+#include <fstream>
 
 #include "lsm_tree.h"
 #include "merge.h"
@@ -992,49 +994,54 @@ void LSMTree::KNN_query1(entry_t query_point, int k)
     set<int>::iterator Q_iter;
     set<pair<float, entry_t>>::iterator iter_result;
 
-    l_k = u_k = buffer.entries.lower_bound(query_point);
+	set<pair<float, entry_t>>::iterator temp_set;
 
-    // 앞뒤로 k/2씩 이동해서 k개 범위 도출 
-    for (int i = 0; i <= k; i++) {
-        if (compute_d > Compute_distance(query_point, *l_k)) {
-            compute_d = Compute_distance(query_point, *l_k);
-            k_temp = l_k;
-        }
-        if (compute_d > Compute_distance(query_point, *u_k)) {
-            compute_d = Compute_distance(query_point, *u_k);
-            k_temp = u_k;
-        }
-        l_k--;
-        u_k++;
-    }
+	if (buffer.entries.size() > 0) {
+		l_k = u_k = buffer.entries.lower_bound(query_point);
 
-    // 2/k만큼 query_point로부터 가까운 진짜 LB, UB설정
-    l_k = u_k = k_temp;
-    for (int i = 0; i <= k; i++) {
-        temp_result.insert({ Compute_distance(query_point, *u_k) ,*u_k });
-        temp_result.insert({ Compute_distance(query_point, *l_k) ,*l_k });
-        l_k--;
-        u_k++;
-    }
+		// 앞뒤로 k/2씩 이동해서 k개 범위 도출 
+		for (int i = 0; i <= k; i++) {
+			if (compute_d > Compute_distance(query_point, *l_k)) {
+				compute_d = Compute_distance(query_point, *l_k);
+				k_temp = l_k;
+			}
+			if (compute_d > Compute_distance(query_point, *u_k)) {
+				compute_d = Compute_distance(query_point, *u_k);
+				k_temp = u_k;
+			}
+			l_k--;
+			u_k++;
+		}
 
-    //// [ Buffer ] 앞뒤 2/k 만큼 돌려서 나온 최종 k개 결과값을 k_result에 input //// 
-    set<pair<float, entry_t>>::iterator temp_set;
+		// 2/k만큼 query_point로부터 가까운 진짜 LB, UB설정
+		l_k = u_k = k_temp;
+		for (int i = 0; i <= k; i++) {
+			temp_result.insert({ Compute_distance(query_point, *u_k) ,*u_k });
+			temp_result.insert({ Compute_distance(query_point, *l_k) ,*l_k });
+			l_k--;
+			u_k++;
+		}
 
-    for (iter_result = temp_result.begin(); iter_result != temp_result.end(); iter_result++) {
-        if (k_result.size() < k) {
-            k_result.insert({ Compute_distance(query_point, (*iter_result).second), (*iter_result).second });
-        }
-        else {
-            temp_set = k_result.end();
-            temp_set--;
-            distance = (*temp_set).first;
-            temp_result.clear();
-            break;
-        }
-    }
+		//// [ Buffer ] 앞뒤 2/k 만큼 돌려서 나온 최종 k개 결과값을 k_result에 input //// 
 
+		for (iter_result = temp_result.begin(); iter_result != temp_result.end(); iter_result++) {
+			if (k_result.size() < k) {
+				k_result.insert({ Compute_distance(query_point, (*iter_result).second), (*iter_result).second });
+			}
+			else {
+				temp_set = k_result.end();
+				temp_set--;
+				distance = (*temp_set).first;
+				temp_result.clear();
+				break;
+			}
+		}
+	}
+	else {
+		distance = 8.656678713232676;
+	}
+    
     Q_filter = Create_Query_filter(query_point.val, distance);
-
     //// [ Disk ] 앞뒤 2/k 만큼 돌려서 나온 최종 k개 결과값을 k_result에 input //// 
     for (int i = 0; i < DEFAULT_TREE_DEPTH; i++) {
         if (i < 3) {
@@ -1044,11 +1051,9 @@ void LSMTree::KNN_query1(entry_t query_point, int k)
                 //int check_run = (*iter) / pow(4, 2 - i);                          // Matchting {Q_filter size and Full size}
                 int check_run = Q_iter / pow(4, 2 - i);                             // Matchting {Q_filter size and Full size}
                 if (check_run != temp) {                                            // 쿼리필터에 값(=숫자)가 아무거나 있으면 Range query 수행
-
                     if (levels[i].runs_list[check_run]->spatial_filter[0] == 0 && levels[i].runs_list[check_run]->spatial_filter[1] == 0 && levels[i].runs_list[check_run]->spatial_filter[2] == 0 && levels[i].runs_list[check_run]->spatial_filter[3] == 0) {
                         continue;
                     }
-
                     l_k = u_k = levels[i].runs_list[check_run]->entries.lower_bound(query_point);
                     // 앞뒤로 k/2씩 이동해서 k개 출력
                     compute_d = 8.656678713232676;
@@ -1064,6 +1069,7 @@ void LSMTree::KNN_query1(entry_t query_point, int k)
                         l_k--;
                         u_k++;
                     }
+
                     l_k = u_k = k_temp;
                     compute_d = 0;
                     for (int i = 0; i <= k; i++) {
@@ -1077,7 +1083,6 @@ void LSMTree::KNN_query1(entry_t query_point, int k)
                     // range query <-- level, idx, query_point, distance
                     //cout << compute_d << endl;
                     //temp_result = NN_range(i, check_run, query_point, compute_d);
-
                     for (iter_result = temp_result.begin(); iter_result != temp_result.end(); iter_result++) {
                         if ((*iter_result).first < distance) {
                             k_result.insert(*iter_result);
@@ -1097,7 +1102,6 @@ void LSMTree::KNN_query1(entry_t query_point, int k)
                             break;
                         }
                     }
-
                     temp = check_run;
 
                     IO_Check = IO_Check + int(levels[i].runs_list[check_run]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
@@ -1116,7 +1120,6 @@ void LSMTree::KNN_query1(entry_t query_point, int k)
                 if (levels[i].runs_list[check_run]->spatial_filter[0] == 0 && levels[i].runs_list[check_run]->spatial_filter[1] == 0 && levels[i].runs_list[check_run]->spatial_filter[2] == 0 && levels[i].runs_list[check_run]->spatial_filter[3] == 0) {
                     continue;
                 }
-
                 l_k = u_k = levels[i].runs_list[check_run]->entries.lower_bound(query_point);
                 // 앞뒤로 k/2씩 이동해서 k개 출력
                 compute_d = 8.656678713232676;
@@ -1139,7 +1142,6 @@ void LSMTree::KNN_query1(entry_t query_point, int k)
                     l_k--;
                     u_k++;
                 }
-
                 // compute_d만큼 range를 돌려서 결과를 temp_result에 input
                 // range query <-- level, idx, query_point, distance
                 //temp_result = NN_range(i, check_run, query_point, compute_d);
@@ -1163,7 +1165,6 @@ void LSMTree::KNN_query1(entry_t query_point, int k)
                         break;
                     }
                 }
-
                 IO_Check = IO_Check + int(levels[i].runs_list[check_run]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
                 if (levels[i].runs_list[check_run]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
                     IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
@@ -1171,7 +1172,6 @@ void LSMTree::KNN_query1(entry_t query_point, int k)
             }
         }
     }
-
     //return k_result;
     cout << "\n* kNN Result " << endl;
     cout << "-------------------------------------------------------------------------------------" << endl;
@@ -1397,4 +1397,222 @@ set<pair<float, entry_t>> LSMTree::NN_range(int current, int idx, entry_t query_
     }
 
     return run_result;
+}
+
+// ----- Bulk-Loading Functions ----- //
+void LSMTree::mergeFiles(int &file_count) {
+	//list of ifstream objects. since now all the ram_sized files need to be open simultaneously
+	vector<ifstream> input_files(file_count);
+	entry_t entry;
+	int num;
+	string line;
+	vector<string> result;
+
+	//opening the files to read. file_name is being constructed on the fly by using file_counh reference
+	for (int i = 0; i < file_count; ++i) {
+		string file_name = "run_list/" + to_string(i) + ".txt";
+		input_files[i].open(file_name);
+	}
+	//creating a file output.txr to write the sorted numbers
+	ofstream output;
+	output.open("run_list/external_output.txt");
+
+	//Node represents the node for each file. every time a element is read from a file, ifstream updates the file position pointer to point to the next element
+	priority_queue<Node, vector<Node>, cmp> pq;
+	
+	for (int i = 0; i < file_count; ++i) {
+		//reading from file pointed by input_files[i]
+		getline(input_files[i], line);
+		result = split(line, ' ');
+		entry.key = stoul(result[0]);
+		entry.val.x = stof(result[1]);
+		entry.val.y = stof(result[2]);
+		result.clear();
+
+		//creating an object out of the value and index -> external merge 전에 쪼갠 파일의 맨위값(geo)으로 파일간 2차 정렬 수행
+		Node N(entry, i);
+		pq.push(N);
+	}
+
+	// 쪼갠 파일 종합해서 write
+	while (pq.size()) {
+		// external merge해서 쪼갠 파일 종합-> 1.쪼갠 파일 맨 위에 작은 값 먼저 write  2. 다음줄 push해서 나머지 전부 write
+		Node node = pq.top();
+		pq.pop();
+		output << node.element.key << " " << to_string(node.element.val.x) << " " << to_string(node.element.val.y) << "\n";
+
+		if (getline(input_files[node.index], line)) {
+			result = split(line, ' ');
+
+			node.element.key = stoul(result[0]);
+			node.element.val.x = stof(result[1]);
+			node.element.val.y = stof(result[2]);
+			pq.push(node);
+			result.clear();
+		}
+		//else end of file reached for input_files[i] no more element to be read
+	}
+
+	//closing the opened files
+	for (int i = 0; i < file_count; ++i) {
+		string file_name = "run_list/" + to_string(i) + ".txt";
+		input_files[i].close();
+	}
+	output.close();
+}
+
+vector<string> LSMTree::split(string str, char Delimiter) {
+	istringstream iss(str);             // istringstream에 str을 담는다.
+	string buffer;                      // 구분자를 기준으로 절삭된 문자열이 담겨지는 버퍼
+
+	vector<string> result;
+
+	// istringstream은 istream을 상속받으므로 getline을 사용할 수 있다.
+	while (getline(iss, buffer, Delimiter)) {
+		result.push_back(buffer);               // 절삭된 문자열을 vector에 저장
+	}
+
+	return result;
+}
+
+void LSMTree::createRAMFiles(ifstream &inp_file, int ram_size, int &file_count) {
+	ofstream out_file;
+	vector<entry_t> nums;
+	bool more_input = true;
+	int num_count = 0;
+	KEY_t tmp_key;
+	float x, y;
+	string file_name = "";
+
+	string line;
+	vector<string> result;
+
+	entry_t entry;
+	
+	while (more_input) {
+		nums.clear();
+		while (num_count < ram_size) {
+			if (getline(inp_file, line)) {
+				result = split(line, ' ');				
+				entry.key = make_key(stof(result[1]), stof(result[2]));
+				entry.val.x = stof(result[1]);
+				entry.val.y = stof(result[2]);
+				nums.push_back(entry);
+				num_count++;
+				result.clear();
+			}
+			else {
+				//not able to read number. End of file reached
+				more_input = false;
+				break;
+			}
+		}
+
+		if (nums.empty()) break;
+		sort(nums.begin(), nums.end());  // key(geohash)기반으로 quick sort
+		file_name = "run_list/" + to_string(file_count) + ".txt";
+
+		//creates a file on demand and writes the sorted contents of nums
+		out_file.open(file_name);
+		for (int i = 0; i < nums.size(); ++i) {
+			//writing to the file named 'file_name'
+			out_file << nums[i].key << " " << to_string(nums[i].val.x) << " " << to_string(nums[i].val.y) << "\n"; 
+		}
+		//close the file. It's required because out_file object then can be used to open a different file
+		out_file.close();
+
+		//re initializing for inserting ram_size elements again
+		num_count = 0;
+
+		// number of files created
+		file_count++;
+	}
+}
+
+void LSMTree::BulkLoading_query() {	
+	// ------------------------------------- external merge sort ------------------------------------- //
+	ifstream inp_file;	
+	inp_file.open("src/sample_data.txt");
+	if (!inp_file) {
+		cout << "파일없음" << endl;
+	}
+	
+	int ram_size = 10000;									// = 디바이드 앤 퀀쿼 할 때 데이터 나누는 개수
+	int file_count = 0;										// = 디바이드 앤 퀀쿼 하면서 생성된 파일 개수 (알아서 계산됨)
+
+	//passing the input file, ram_size and file count as reference
+	createRAMFiles(inp_file, ram_size, file_count);
+	
+	//Merge the files and write to a output.txt
+	mergeFiles(file_count);
+
+	inp_file.close();
+	file_count = 0;
+	// ----------------------------------------------------------------------------------------------- //
+
+	// ---------------------------- insert data to last level of sLSM-Tree --------------------------- //
+	vector<Level>::iterator current = levels.end() - 1;  //반드시 마지막 레벨은 end()-1해줘야함;
+	int i = 0; KEY_t temp = KEY_MAX;					 // 'i' is a run index of levels	
+	KEY_t min_key;
+	KEY_t max_key;
+	min_key = 0;
+	max_key = temp / 64 - 1;
+	int num_of_data = 0;
+	entry_t entry;
+
+	string input_data;
+	char ch_input_data[100];
+	
+	FILE * file;
+	file = fopen("run_list/external_output.txt", "r");
+
+	if (file == NULL) {
+		cout << "\n* Invalid file address to input data. Please check Valid File address!" << endl;
+	}
+	else {
+		// generate file    
+		string st_file_name;
+		char ch_file_name[100];
+		st_file_name = "runs_list/" + to_string(current->runs_list[i]->idx_level) + "_" + to_string(i) + ".txt";  // start maxlevel_0
+		strcpy(ch_file_name, st_file_name.c_str());
+		FILE* fp = NULL;
+		fp = fopen(ch_file_name, "a"); //test파일을 a(이어서 쓸 수 있는) 모드로 열기
+
+		while (!feof(file))
+		{
+			KEY_t op;
+			float x, y;
+			fscanf(file, "%d %f %f\n", &op, &x, &y);
+			entry.key = op; entry.val.x = x; entry.val.y = y;
+
+			// move to next run in current level
+			while (max_key < entry.key) {
+				fclose(fp);
+
+				i++;
+				min_key = (temp / 64) * i;               // update current run's min_key
+				max_key = (temp / 64) * (i + 1) - 1;     // update current run's max_key
+
+				st_file_name = "runs_list/" + to_string(current->runs_list[i]->idx_level) + "_" + to_string(i) + ".txt";  // start maxlevel_0
+				strcpy(ch_file_name, st_file_name.c_str());
+				fp = fopen(ch_file_name, "a"); //test파일을 a(이어서 쓸 수 있는) 모드로 열어야함! <----- 재실험할 때 데이터 누적되니까 서버에서 지워줘야함
+			}
+			
+			current->runs_list[i]->put(entry);
+			
+			// input to txt file                
+			input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
+			strcpy(ch_input_data, input_data.c_str());
+			fputs(ch_input_data, fp); //문자열 write
+
+			num_of_data++;
+
+			current->runs_list[i]->spatial_filter[0] = 1; current->runs_list[i]->spatial_filter[1] = 1; current->runs_list[i]->spatial_filter[2] = 1; current->runs_list[i]->spatial_filter[3] = 1;
+		}
+		cout << "\n* Success s-LSM Building with " << num_of_data << " point data By using Bulk-Loading Query!" << endl;
+		fclose(fp);
+		fclose(file);
+		
+		num_of_data = 0;
+	}
 }
