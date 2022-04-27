@@ -50,7 +50,8 @@ typedef struct _RTREEBRANCH
 }RTREEBRANCH;
 
 /* max branching factor of a node */
-#define MAXCARD (int)((PAGE_SIZE-(2*sizeof(int))) / sizeof(RTREEBRANCH))    // MAXCARD = 73,   sizeof(int) = 4,  sizeof(RTREEBRANCH) = 56
+//#define MAXCARD (int)((PAGE_SIZE-(2*sizeof(int))) / sizeof(RTREEBRANCH))    // MAXCARD = 73,   sizeof(int) = 4,  sizeof(RTREEBRANCH) = 56
+#define MAXCARD 5
 
 typedef struct _RTREENODE
 {
@@ -201,7 +202,8 @@ int RTreePickBranch( RTREEMBR *rc, RTREENODE *node);
  * Returns 1 if node split, sets *new_node to address of new node.
  * Old node updated, becomes one of two.
  */
-int RTreeAddBranch( RTREEBRANCH *br, RTREENODE *node, RTREENODE **new_node);
+//int RTreeAddBranch( RTREEBRANCH *br, RTREENODE *node, RTREENODE **new_node);
+int RTreeAddBranch(RTREEBRANCH* br, RTREENODE* node, RTREENODE** new_node, int level);
 
 
 /**

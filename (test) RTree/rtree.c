@@ -163,10 +163,8 @@ static void _RTreePickSeeds(RTREEPARTITION *p)
 /**
  * Copy branches from the buffer into two nodes according to the partition.     <-----------------------------------이거이거 이게 split한 후에 넣는 부분
  */
-static void _RTreeLoadNodes( RTREENODE *n, RTREENODE *q, RTREEPARTITION *p)  // 얘 호출하는거 스플릿함수 끝부분 하나밖에 없음
+static void _RTreeLoadNodes( RTREENODE *n, RTREENODE *q, RTREEPARTITION *p, int level)  // 얘 호출하는거 스플릿함수 끝부분 하나밖에 없음
 {
-	IO_chek = IO_chek + 2;   // split된 후 버퍼에 있는 두 노드를 넣어주는 곳 (+2)
-
     int i;
     assert(n && q && p);
 
@@ -174,9 +172,9 @@ static void _RTreeLoadNodes( RTREENODE *n, RTREENODE *q, RTREEPARTITION *p)  // 
     {
         assert(p->partition[i] == 0 || p->partition[i] == 1);
         if (p->partition[i] == 0)
-            RTreeAddBranch(&BranchBuf[i], n, NULL);
+            RTreeAddBranch(&BranchBuf[i], n, NULL, level);
         else if (p->partition[i] == 1)
-            RTreeAddBranch(&BranchBuf[i], q, NULL);
+            RTreeAddBranch(&BranchBuf[i], q, NULL, level);
     }
 }
 
@@ -380,7 +378,7 @@ static int _RTreeInsertRect( RTREEMBR *rc, int tid,  RTREENODE *node, RTREENODE 
         b.child = n2;                                                               // 자식노드 새로 할당해줘
         b.mbr = RTreeNodeCover(n2);                                                 // 자식노드 mbr만들어줘
 		
-        return RTreeAddBranch(&b, node, new_node);  // 6.스플릿 시도
+        return RTreeAddBranch(&b, node, new_node, level);  // 6.스플릿 시도
 
 
 
@@ -397,7 +395,7 @@ static int _RTreeInsertRect( RTREEMBR *rc, int tid,  RTREENODE *node, RTREENODE 
 
 		
         /* child field of leaves contains tid of data record */
-        return RTreeAddBranch(&b, node, new_node);                   // <--------If node split return 1 => (+2)
+        return RTreeAddBranch(&b, node, new_node, level);                   // <--------If node split return 1 => (+2)
     }
 
 
@@ -752,7 +750,7 @@ void RTreeSplitNode( RTREENODE *node, RTREEBRANCH *br, RTREENODE **new_node)
     /* put branches from buffer into 2 nodes according to chosen partition    */      // <--------------여기에서 넣는거다
     *new_node = RTreeNewNode();
     (*new_node)->level = node->level = level;
-    _RTreeLoadNodes(node, *new_node, p);												// <-----------이함수에 <중요>
+    _RTreeLoadNodes(node, *new_node, p, level);												// <-----------이함수에 <중요>
 
     assert(node->count+(*new_node)->count == p->total);
 }
@@ -903,14 +901,16 @@ int RTreePickBranch( RTREEMBR *rc, RTREENODE *node)
  * Old node updated, becomes one of two.
  */
 /* 6. (split 시도 이어서) */
-int RTreeAddBranch( RTREEBRANCH *br, RTREENODE *node, RTREENODE **new_node)
+int RTreeAddBranch( RTREEBRANCH *br, RTREENODE *node, RTREENODE **new_node, int level)
 {
     int i;
     assert(br && node);
     
     if (node->count < MAXKIDS(node))  /* split won't be necessary => node->count가 노드 안에 있는 갯수, MAXKIDS(node)가 노드 Maximum 갯수인 것 같음!! =>그래서 공간 있으면 split안하고 걍 넣음 */
     {   // 7. pickbranch 한 i에 공간 있어 = 노드를 넣어줘 (=확인이야)
-		IO_chek = IO_chek + 1;												// <-------여기 픽스픽스 (노드 하나 봄) <-split 안되었을 때임 (+1)
+        if (node->level - 2 > level) {
+            IO_chek = IO_chek + 1;												// <-------여기 픽스픽스 (노드 하나 봄) <-split 안되었을 때임 (+1)
+        }
         for (i = 0; i < MAXKIDS(node); i++)  /* find empty branch */
         {
             if (node->branch[i].child == NULL)
@@ -927,7 +927,9 @@ int RTreeAddBranch( RTREEBRANCH *br, RTREENODE *node, RTREENODE **new_node)
     assert(new_node);
     RTreeSplitNode(node, br, new_node);
 
-	IO_chek = IO_chek + 1;												// <-------여기 픽스픽스 (타고 올라가는 부분)
+    if (node->level - 2 > level) {
+        IO_chek = IO_chek + 1;												// <-------여기 픽스픽스 (타고 올라가는 부분)
+    }
 
     return 1;
 }
@@ -1061,11 +1063,11 @@ int RTreeInsertRect( RTREEMBR *rc, int tid, RTREENODE **root, int level)
 
         b.mbr = RTreeNodeCover(*root);
         b.child = *root;                       // Change root node -> child node
-        RTreeAddBranch(&b, newroot, NULL);     // = add 1 Branch 
+        RTreeAddBranch(&b, newroot, NULL, level);     // = add 1 Branch 
 
         b.mbr = RTreeNodeCover(newnode);
         b.child = newnode;                     // Create new child node
-        RTreeAddBranch(&b, newroot, NULL);     // = add 1 another Branch 
+        RTreeAddBranch(&b, newroot, NULL, level);     // = add 1 another Branch 
 
         *root = newroot;                       // Create new root node        
 		
