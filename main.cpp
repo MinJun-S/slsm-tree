@@ -257,7 +257,7 @@ int main(int argc, char *argv[]) {
 	
 	//printf("\sizeof(entry_t) : %d\n", sizeof(entry_t));
     //buffer_max_entries = buffer_num_pages * getpagesize() / sizeof(entry_t);
-	buffer_max_entries = 4096;
+	buffer_max_entries = 4096; // 한 노드 사이즈(=버퍼의 사이즈)
     //printf("\nbuffer size : %d\n", buffer_max_entries);
 
     LSMTree tree(buffer_max_entries, depth, fanout, num_threads, bf_bits_per_entry);

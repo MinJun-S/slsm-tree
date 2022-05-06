@@ -17,7 +17,7 @@ using namespace std;
 
 #define DEFAULT_TREE_DEPTH 10
 #define DEFAULT_TREE_FANOUT 1
-#define DEFAULT_BUFFER_NUM_PAGES 1000
+#define DEFAULT_BUFFER_NUM_PAGES 1000  // 버퍼를 기준으로 1/4일 때 사이즈
 #define DEFAULT_THREAD_COUNT 4
 #define DEFAULT_BF_BITS_PER_ENTRY 0.5
 
