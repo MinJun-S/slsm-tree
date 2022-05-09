@@ -21,7 +21,7 @@ void command_loop(LSMTree& tree) {
     FILE* file; 
 
     /* Ver. 1 */
-    cout << "\n* z-LSM Tree building... " << endl;
+    cout << "\n* s-LSM Tree building... " << endl;
     file = fopen("SaveFile/Save_File.txt", "r");
     
     if (file == NULL) {
@@ -39,7 +39,7 @@ void command_loop(LSMTree& tree) {
             //tree.put(make_key(val.x, val.y), val);
             i++;
         }
-        cout << "\n* Success z-LSM Tree building with " << i << " point data!" << endl;
+        cout << "\n* Success s-LSM Tree building with " << i << " point data!" << endl;
         fclose(file);
     }
 
