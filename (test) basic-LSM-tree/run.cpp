@@ -11,7 +11,6 @@
 #include <sys/stat.h>
 
 #include "run.h"
-
 using namespace std;
 
 Run::Run(long max_size, float bf_bits_per_entry, int idx_level) :
@@ -23,7 +22,7 @@ Run::Run(long max_size, float bf_bits_per_entry, int idx_level) :
 
     size = 0;
     fence_pointers.reserve(max_size / getpagesize());
-    
+	
     /*tmp_fn = strdup(TMP_FILE_PATTERN);
     tmp_file = mkstemp(tmp_fn);*/
     
@@ -33,6 +32,9 @@ Run::Run(long max_size, float bf_bits_per_entry, int idx_level) :
     mapping_fd = -1;
 
     string run_name = to_string(idx_level) + "_";  // maybe remove!!!!
+	
+	bPTree = new BPTree(5, 1000);
+
 }
 
 Run::~Run(void) {
@@ -169,6 +171,9 @@ void Run::put(entry_t entry) {
     //entry_t entry;
     set<entry_t>::iterator it;
     bool found;
+
+	
+	//bPTree->bpt_insert(entry.key);
 
     tie(it, found) = entries.insert(entry);
 

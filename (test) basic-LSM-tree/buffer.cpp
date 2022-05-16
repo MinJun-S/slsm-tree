@@ -37,7 +37,7 @@ vector<entry_t> * Buffer::range(KEY_t start, KEY_t end) const {
     return new vector<entry_t>(subrange_start, subrange_end);
 }
 
-bool Buffer::put(KEY_t key, VAL_t val) {
+bool Buffer::put(KEY_t key, VAL_t val, BPTree** bPTree) {
     entry_t entry;
     set<entry_t>::iterator it;
     bool found;
@@ -49,6 +49,8 @@ bool Buffer::put(KEY_t key, VAL_t val) {
         entry.val = val;
 
         tie(it, found) = entries.insert(entry);
+
+		insertionMethod(bPTree, key);
 
         // Update the entry if it already exists
         if (found == false) {
@@ -62,4 +64,20 @@ bool Buffer::put(KEY_t key, VAL_t val) {
 
 void Buffer::empty(void) {
     entries.clear();
+}
+
+void Buffer::insertionMethod(BPTree** bPTree, KEY_t key) {
+	// 노드 생성 -> BPT의 키값(geohash) = rollNo
+	// 'p'커맨드처럼 하나씩 입력하는거니까 -> 이 함수를 LSM트리에서 entries.put()대신에 사용하고, 파일 읽기만 바꿔주면 될듯
+	// set<entry> entries는 set<>버리고 BPT로 바꿔야하나
+	
+	string fileName = "src/DBFiles/";
+	fileName += to_string(key) + ".txt";
+	FILE* filePtr = fopen(fileName.c_str(), "w");
+	string userTuple = to_string(key) + "\n";
+	fprintf(filePtr, userTuple.c_str());
+	(*bPTree)->bpt_insert(key, filePtr);
+	//bPTree->bpt_insert(key, filePtr);
+	fclose(filePtr);
+	
 }

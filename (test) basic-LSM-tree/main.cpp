@@ -3,10 +3,13 @@
 */
 #include <iostream>
 #include <vector>
+#include <fstream>
+#include <string>
 
 #include "lsm_tree.h"
 #include "sys.h"
 #include "unistd.h"
+#include "B+ Tree.h"
 
 using namespace std;
 
@@ -19,9 +22,10 @@ void command_loop(LSMTree& tree) {
     int i = 0;
 
     FILE* file; 
+	BPTree* bPTree = new BPTree(5, 1000); // buffer BPT
 
     /* Ver. 1 */
-    cout << "\n* s-LSM Tree building... " << endl;
+    cout << "\n* z-LSM Tree building... " << endl;
     file = fopen("SaveFile/Save_File.txt", "r");
     
     if (file == NULL) {
@@ -35,11 +39,12 @@ void command_loop(LSMTree& tree) {
             float x, y; KEY_t l_key;
             fscanf(file, "%f %f %d\n",&x, &y, &l_key);
             val.x = x; val.y = y;
-            tree.put(l_key, val);
+            //tree.put(l_key, val);
+
             //tree.put(make_key(val.x, val.y), val);
             i++;
         }
-        cout << "\n* Success s-LSM Tree building with " << i << " point data!" << endl;
+        cout << "\n* Success z-LSM Tree building with " << i << " point data!" << endl;
         fclose(file);
     }
 
@@ -74,7 +79,7 @@ void command_loop(LSMTree& tree) {
                 //die("Could not insert value " + to_string(val.x) + to_string(val.y)+ ": out of range.");
                 cout<<"Could not insert value " + to_string(val.x) +", " + to_string(val.y) + ": out of range.\n";
             } else {
-                tree.put(make_key(val.x,val.y), val);
+                //tree.put(make_key(val.x,val.y), val);
             }
 
             break;
@@ -102,30 +107,33 @@ void command_loop(LSMTree& tree) {
             break;
 
         case 'i':
-            cout << "\n* Loading File and Start s-LSM Tree Building... " << endl;            
-            FILE * file; 
-            file = fopen("src/sample_data.txt", "r");
+		{
+			cout << "\n* Loading File and Start z-LSM Tree Building... " << endl;
+			FILE * file;
+			file = fopen("src/sample_data.txt", "r");
 
-            if (file == NULL) {
-                cout << "\n* Invalid file address. Please check Valid File address!" << endl;
-                break;
-            }
-            else {
-                while (!feof(file))        
-                {
-                    char op; float x, y;
-                    fscanf(file, "%c %f %f\n", &op, &x, &y);
-                    val.x = x; val.y = y;
-                    tree.put(make_key(val.x, val.y), val);
-                    i++;
-                }
-                cout << "\n* Success s-LSM Building with " << i << " point data!" << endl;
-                fclose(file);
-            }        
+			//BPTree* bPTree = new BPTree(5, 1000); // buffer BPT
+
+			if (file == NULL) {
+				cout << "\n* Invalid file address. Please check Valid File address!" << endl;
+				break;
+			}
+			else {
+				while (!feof(file))
+				{
+					char op; float x, y;
+					fscanf(file, "%c %f %f\n", &op, &x, &y);
+					val.x = x; val.y = y;
+					tree.put(make_key(val.x, val.y), val, &bPTree);
+					i++;
+				}
+				cout << "\n* Success z-LSM Building with " << i << " point data!" << endl;
+				fclose(file);
+			}
 			cout << " * I/O Check = " << tree.IO_Check << endl;
-            tree.IO_Check = 0;
-            break;
-
+			tree.IO_Check = 0;
+			break;
+		}
         case 's':
             cout << "\n* Saving File... " << endl;
             //tree.save_run();
@@ -138,7 +146,7 @@ void command_loop(LSMTree& tree) {
 			break;
 
         case 'r':                                       // range query
-
+			tree.IO_Check = 0;
             float dist;
             entry_t entry;
             cout << "* Input x, y and range_distance " << endl;
@@ -152,8 +160,9 @@ void command_loop(LSMTree& tree) {
             Upper = make_key(entry.val.x + dist, entry.val.y + dist);
             cout << "  " << endl;
 
-            tree.range_query(entry, dist);
-            cout << " * I/O Check = " << tree.IO_Check << endl;
+			tree.searchMethod(bPTree, Lower, Upper);    // B+tree range query
+            //tree.range_query(entry, dist);            // 배열(sLSM처럼) range query
+            //cout << " * I/O Check = " << tree.IO_Check << endl;
             tree.IO_Check = 0;
             break;
         case 'k':                                       // knn1 query

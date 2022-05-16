@@ -13,6 +13,7 @@
 #include "spin_lock.h"
 #include "types.h"
 #include "worker_pool.h"
+#include "B+ Tree.h"
 
 using namespace std;
 
@@ -37,7 +38,7 @@ class LSMTree {
 public:
     set<int> Q_filter;
     LSMTree(int, int, int, int, float);
-    void put(KEY_t, VAL_t);
+    void put(KEY_t, VAL_t, BPTree**);
     void get(KEY_t);
     void range(KEY_t, KEY_t);
     void del(KEY_t);
@@ -58,6 +59,7 @@ public:
     
 	int IO_Check;
     
+	void searchMethod(BPTree*, KEY_t, KEY_t);
 };
 
 KEY_t make_key(float x, float y);

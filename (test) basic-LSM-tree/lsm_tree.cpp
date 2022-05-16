@@ -146,6 +146,14 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
         */
         next->runs_list[i]->put(entry);
 
+		string fileName = "src/DBFiles/";
+		fileName += to_string(entry.key) + ".txt";
+		FILE* filePtr = fopen(fileName.c_str(), "w");
+		string userTuple = to_string(entry.key) + "\n";
+		fprintf(filePtr, userTuple.c_str());
+		next->runs_list[i]->bPTree->bpt_insert(entry.key, filePtr);
+		fclose(filePtr);
+
         //////////////////////////////////////////////////////////////////////////////
         // input to txt file
         input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
@@ -169,6 +177,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
      */
     Run* tmp = new Run(current->max_run_size, bf_bits_per_entry, level_temp - 1);
 
+	delete current->runs_list[idx]->bPTree;
     current->runs_list[idx]->empty();
     //delete current->runs_list[idx];
 
@@ -177,13 +186,13 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     //cout << "\n ┗------------- [ END : Merge Down ] -------------┛\n" << endl;
 }
 
-void LSMTree::put(KEY_t key, VAL_t val) {
+void LSMTree::put(KEY_t key, VAL_t val, BPTree** bPTree) {
     KEY_t max_key;
     KEY_t min_key;
     /*
      * Try inserting the key into the buffer
      */
-    if (buffer.put(key, val)) {
+    if (buffer.put(key, val, bPTree)) {
         return;
     }
 
@@ -221,6 +230,15 @@ void LSMTree::put(KEY_t key, VAL_t val) {
 
     for (const auto& entry : buffer.entries) {
 		levels.front().runs_list[i]->put(entry);
+
+		string fileName = "src/DBFiles/";
+		fileName += to_string(entry.key) + ".txt";
+		FILE* filePtr = fopen(fileName.c_str(), "w");
+		string userTuple = to_string(entry.key) + "\n";
+		fprintf(filePtr, userTuple.c_str());
+		levels.front().runs_list[i]->bPTree->bpt_insert(entry.key, filePtr);
+		fclose(filePtr);
+
         // input to txt file
         input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
         strcpy(ch_input_data, input_data.c_str());
@@ -237,10 +255,11 @@ void LSMTree::put(KEY_t key, VAL_t val) {
 
     fclose(fp);       //파일 포인터 닫기////////////////////////////////////////
 
+	//delete levels.front().runs_list[i]->bPTree;
     buffer.empty();
     //cout << buffer.entries.size() << endl;
 
-    assert(buffer.put(key, val));
+    assert(buffer.put(key, val, bPTree));
 }
 
 Run * LSMTree::get_run(int index) {
@@ -398,7 +417,7 @@ void LSMTree::range(KEY_t start, KEY_t end) {
 void LSMTree::del(KEY_t key) {
     VAL_t temp;
     temp.x = VAL_TOMBSTONE; temp.y = VAL_TOMBSTONE;
-    put(key, temp);
+    //put(key, temp);
 }
 
 // 원본 load() 함수 (지우지말것)
@@ -410,7 +429,7 @@ void LSMTree::load(string file_path) {
 
     if (stream.is_open()) {
         while (stream >> entry) {
-            put(entry.key, entry.val);
+            //put(entry.key, entry.val);
         }
 
     } else {
@@ -911,4 +930,35 @@ void LSMTree::KNN_query2(entry_t query_point, int k) {
     for (auto it = k_result.begin(); it != k_result.end(); it++) {
         cout << setw(9) << (*it).second.val.x << "  |  " << setw(9) << (*it).second.val.y << "  |  " << setw(11) << (*it).second.key << "  |  " << setw(9) << (*it).first << endl;
     }
+}
+
+/* B+Tree Range 쿼리 */
+void LSMTree::searchMethod(BPTree* bPTree, KEY_t Lower, KEY_t Upper) {
+	int bpt_IO_Check = 0;	
+
+	// IO체크할라고 disk에 있는 B+Tree만 작업했음
+	BPTree* disk_bPTree;
+	for (int i = 0; i < DEFAULT_TREE_DEPTH; i++)
+	{
+		cout << "\n* Disk Level " << i + 1 << " Result " << endl;
+		cout << "-------------------------------------------------------------------------------------" << endl;
+
+		
+		//disk_entries = current_level->runs_list[0]->entries;
+		// Insert entry to Result
+		disk_bPTree = levels[i].runs_list[0]->bPTree;		
+		bpt_IO_Check += disk_bPTree->bpt_search(Lower, Upper, bpt_IO_Check);
+
+
+		//IO_Check = IO_Check + int(levels[i].runs_list[0]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+		//if (levels[i].runs_list[0]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+		//	IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+		//}
+
+		cout << "-------------------------------------------------------------------------------------" << endl;
+		//current_level += 1;
+	}
+	cout << " * root to leaf nonono~ " << endl;
+	cout << " * I/O Check = " << to_string(bpt_IO_Check) << endl;
+
 }

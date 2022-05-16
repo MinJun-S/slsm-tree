@@ -10,7 +10,7 @@
 #include <string.h>
 #include "types.h"
 #include "bloom_filter.h"
-
+#include "B+ Tree.h"
 //#define TMP_FILE_PATTERN "/tmp/lsm-XXXXXX"
 
 using namespace std;
@@ -25,6 +25,8 @@ class Run {
 public:
     //bool spatial_filter[4];
     set<entry_t> entries;
+	BPTree* bPTree;
+
     //entry_t* mapping;
     int idx_level, idx_run;
     long size, max_size;
