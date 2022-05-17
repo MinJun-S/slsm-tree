@@ -242,7 +242,6 @@ void BPTree::insertInternal(KEY_t x, Node** cursor, Node** child) {  //in Intern
 
 int BPTree::bpt_search(KEY_t Lower, KEY_t Upper, int bpt_IO_Check) {
 	/* B+tree 하나에 대한 Range query */
-
 	if (root == NULL) {
 		cout << "Data Inserted yet" << endl;
 		return bpt_IO_Check;
@@ -250,7 +249,6 @@ int BPTree::bpt_search(KEY_t Lower, KEY_t Upper, int bpt_IO_Check) {
 	else {
 		Node* cursor = root;
 		vector<KEY_t>::iterator end_of_node;
-
 		// 루트부터 리프까지 타고 내려감
 		while (cursor->isLeaf == false) {
 			/*
@@ -263,19 +261,24 @@ int BPTree::bpt_search(KEY_t Lower, KEY_t Upper, int bpt_IO_Check) {
 			bpt_IO_Check = bpt_IO_Check + 1;
 			
 		}
-		
 		//리프 노드 하나에서 Lower key값에 가장 가까운(=/=똑같은) 값을 찾음
 		int idx = std::lower_bound(cursor->keys.begin(), cursor->keys.end(), Lower) - cursor->keys.begin();  //Binary search
 		//cout << "internal idx : " << idx << endl;
 
 		//bpt_IO_Check = bpt_IO_Check + 1;  // 루트부터 안갈 경우 이걸 추가해야함(=시작 리프노드 IO)
-
 		// Lower key부터 Upper key까지 범위 안에 들어오는거 리프에서만 쭉 이동하면서 다 가져욤 (Lower <= x <= Upper)
 		while (1) {
+			
 			end_of_node = cursor->keys.end();
+			cout << "test7" << endl;
 			if (cursor->keys[idx - 1] == (*end_of_node)) {
 				cursor = cursor->ptr2next;
 				bpt_IO_Check = bpt_IO_Check + 1;
+			}
+			cout << "test9" << endl;
+
+			if (cursor->keys.size() <= idx) {
+				break;
 			}
 
 			if (cursor->keys[idx] >= Lower && cursor->keys[idx] <= Upper) {

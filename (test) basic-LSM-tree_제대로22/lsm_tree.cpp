@@ -949,7 +949,6 @@ void LSMTree::searchMethod(BPTree* bPTree, KEY_t Lower, KEY_t Upper) {
 		//disk_entries = current_level->runs_list[0]->entries;
 		// Insert entry to Result
 		disk_bPTree = levels[i].runs_list[0]->bPTree;
-		cout << "test1" << endl;
 		bpt_IO_Check += disk_bPTree->bpt_search(Lower, Upper, bpt_IO_Check);
 
 
