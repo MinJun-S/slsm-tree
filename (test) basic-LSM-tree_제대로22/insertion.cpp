@@ -270,16 +270,20 @@ int BPTree::bpt_search(KEY_t Lower, KEY_t Upper, int bpt_IO_Check) {
 		while (1) {
 			
 			end_of_node = cursor->keys.end();
-			cout << "test7" << endl;
 			if (cursor->keys[idx - 1] == (*end_of_node)) {
+				if (cursor->ptr2next == NULL) {
+					cout << "test----end" << endl;
+					break;
+				}
+				cout << "test---2" << endl;
 				cursor = cursor->ptr2next;
 				bpt_IO_Check = bpt_IO_Check + 1;
+				idx = 0;
 			}
-			cout << "test9" << endl;
 
-			if (cursor->keys.size() <= idx) {
+			/*if (cursor->keys.size() <= idx) {
 				break;
-			}
+			}*/
 
 			if (cursor->keys[idx] >= Lower && cursor->keys[idx] <= Upper) {
 				//cout << "* Find idx : " << to_string(cursor->keys[idx]) << endl;  //오래걸려서 주석처리함
