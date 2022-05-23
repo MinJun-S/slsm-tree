@@ -103,6 +103,8 @@ void BPTree::bpt_insert(KEY_t key, FILE* filePtr) {  //in Leaf Node
 			cursor->ptr2next = newLeaf;
 			newLeaf->ptr2next = temp;
 
+			newLeaf->ptr2prev = cursor;
+
 			//resizing and copying the keys & dataPtr to OldNode
 			cursor->keys.resize((maxLeafNodeLimit) / 2 + 1);//check +1 or not while partitioning
 			cursor->ptr2TreeOrData.dataPtr.reserve((maxLeafNodeLimit) / 2 + 1);

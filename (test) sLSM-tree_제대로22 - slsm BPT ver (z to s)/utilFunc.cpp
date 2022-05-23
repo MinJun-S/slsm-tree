@@ -12,6 +12,7 @@ Node::ptr::~ptr() {
 Node::Node() {
 	this->isLeaf = false;
 	this->ptr2next = NULL;
+	this->ptr2prev = NULL;
 }
 
 BPTree::BPTree(void) {

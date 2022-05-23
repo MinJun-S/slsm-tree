@@ -27,6 +27,7 @@ public:
 	vector<KEY_t> keys;
 	//Node* ptr2parent; //Pointer to go to parent node CANNOT USE check https://stackoverflow.com/questions/57831014/why-we-are-not-saving-the-parent-pointer-in-b-tree-for-easy-upward-traversal-in
 	Node* ptr2next;              //Pointer to connect next node for leaf nodes
+	Node* ptr2prev;              //Pointer to connect prev node for leaf nodes
 	union ptr {                  //to make memory efficient Node
 		vector<Node*> ptr2Tree;  //Array of pointers to Children sub-trees for intermediate Nodes
 		vector<FILE*> dataPtr;   // Data-Pointer for the leaf node

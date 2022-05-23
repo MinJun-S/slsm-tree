@@ -25,7 +25,7 @@ void command_loop(LSMTree& tree) {
 	BPTree* bPTree = new BPTree(5, 1000); // buffer BPT
 
     /* Ver. 1 */
-    cout << "\n* z-LSM Tree building... " << endl;
+    cout << "\n* s-LSM Tree building... " << endl;
     file = fopen("SaveFile/Save_File.txt", "r");
     
     if (file == NULL) {
@@ -44,7 +44,7 @@ void command_loop(LSMTree& tree) {
             //tree.put(make_key(val.x, val.y), val);
             i++;
         }
-        cout << "\n* Success z-LSM Tree building with " << i << " point data!" << endl;
+        cout << "\n* Success s-LSM Tree building with " << i << " point data!" << endl;
         fclose(file);
     }
 
@@ -136,7 +136,7 @@ void command_loop(LSMTree& tree) {
 					//tree.put(make_key(val.x, val.y), val, &bPTree);
 					i++;
 				}
-				cout << "\n* Success z-LSM Building with " << i << " point data!" << endl;
+				cout << "\n* Success s-LSM Building with " << i << " point data!" << endl;
 				fclose(filePtr);
 				fclose(file);
 			}
