@@ -37,7 +37,9 @@ vector<entry_t> * Buffer::range(KEY_t start, KEY_t end) const {
     return new vector<entry_t>(subrange_start, subrange_end);
 }
 
-bool Buffer::put(KEY_t key, VAL_t val, BPTree** bPTree) {
+
+//bool Buffer::put(KEY_t key, VAL_t val, BPTree** bPTree) {
+bool Buffer::put(KEY_t key, VAL_t val) {
     entry_t entry;
     set<entry_t>::iterator it;
     bool found;
@@ -50,7 +52,7 @@ bool Buffer::put(KEY_t key, VAL_t val, BPTree** bPTree) {
 
         tie(it, found) = entries.insert(entry);
 
-		insertionMethod(bPTree, key);
+		//insertionMethod(bPTree, key);
 
         // Update the entry if it already exists
         if (found == false) {

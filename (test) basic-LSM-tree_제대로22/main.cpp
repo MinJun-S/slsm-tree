@@ -119,15 +119,24 @@ void command_loop(LSMTree& tree) {
 				break;
 			}
 			else {
+				string fileName = "src/DBFiles/";
+				fileName += "1.txt";
+				//fileName += to_string(entry.key) + ".txt";
+				FILE* filePtr = fopen(fileName.c_str(), "w");
+				string userTuple = "1\n";
+				fprintf(filePtr, userTuple.c_str());
+
 				while (!feof(file))
 				{
 					char op; float x, y;
 					fscanf(file, "%c %f %f\n", &op, &x, &y);
 					val.x = x; val.y = y;
-					tree.put(make_key(val.x, val.y), val, &bPTree);
+					//tree.put(make_key(val.x, val.y), val, &bPTree);
+					tree.put(make_key(val.x, val.y), val, filePtr);
 					i++;
 				}
 				cout << "\n* Success z-LSM Building with " << i << " point data!" << endl;
+				fclose(filePtr);
 				fclose(file);
 			}
 			cout << " * I/O Check = " << tree.IO_Check << endl;

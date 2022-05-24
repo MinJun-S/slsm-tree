@@ -34,11 +34,13 @@ class LSMTree {
     float bf_bits_per_entry;
     vector<Level> levels;
     Run * get_run(int);
-    void merge_down(vector<Level>::iterator, int);
+    //void merge_down(vector<Level>::iterator, int);
+	void merge_down(vector<Level>::iterator, int, FILE* filePtr);
 public:
     set<int> Q_filter;
     LSMTree(int, int, int, int, float);
-    void put(KEY_t, VAL_t, BPTree**);
+    //void put(KEY_t, VAL_t, BPTree**);
+	void put(KEY_t, VAL_t, FILE* filePtr);
     void get(KEY_t);
     void range(KEY_t, KEY_t);
     void del(KEY_t);

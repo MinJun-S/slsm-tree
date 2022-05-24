@@ -75,7 +75,8 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
 }
 
 // idx 관련된거 다 지워버리고? 필터랑 minkey랑
-void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
+//void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
+void LSMTree::merge_down(vector<Level>::iterator current, int idx, FILE* filePtr) {
     vector<Level>::iterator next;
     Run** runs_list;
     MergeContext merge_ctx;
@@ -146,14 +147,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
         */
         next->runs_list[i]->put(entry);
 
-		string fileName = "src/DBFiles/";
-		fileName += "1.txt";
-		//fileName += to_string(entry.key) + ".txt";
-		FILE* filePtr = fopen(fileName.c_str(), "w");
-		string userTuple = to_string(entry.key) + "\n";
-		fprintf(filePtr, userTuple.c_str());
 		next->runs_list[i]->bPTree->bpt_insert(entry.key, filePtr);
-		fclose(filePtr);
 
         //////////////////////////////////////////////////////////////////////////////
         // input to txt file
@@ -169,7 +163,8 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
      * recursively merge the next level downwards to create some
      */
     if (next->runs_list[i]->remaining() <= 0) {
-        merge_down(next, i);
+        //merge_down(next, i);
+		merge_down(next, i, filePtr);
         assert(next->runs_list[i]->remaining() > 0);
     }
     
@@ -187,13 +182,15 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
     //cout << "\n ┗------------- [ END : Merge Down ] -------------┛\n" << endl;
 }
 
-void LSMTree::put(KEY_t key, VAL_t val, BPTree** bPTree) {
+//void LSMTree::put(KEY_t key, VAL_t val, BPTree** bPTree) {
+void LSMTree::put(KEY_t key, VAL_t val, FILE* filePtr) {
     KEY_t max_key;
     KEY_t min_key;
     /*
      * Try inserting the key into the buffer
      */
-    if (buffer.put(key, val, bPTree)) {
+    //if (buffer.put(key, val, bPTree)) {
+	if (buffer.put(key, val)) {
         return;
     }
 
@@ -202,7 +199,8 @@ void LSMTree::put(KEY_t key, VAL_t val, BPTree** bPTree) {
      */
 
     if (levels.front().runs_list[0] != NULL) {
-        merge_down(levels.begin(), 0);
+        //merge_down(levels.begin(), 0);
+		merge_down(levels.begin(), 0, filePtr);
     }
 
     /*
@@ -232,14 +230,7 @@ void LSMTree::put(KEY_t key, VAL_t val, BPTree** bPTree) {
     for (const auto& entry : buffer.entries) {
 		levels.front().runs_list[i]->put(entry);
 
-		string fileName = "src/DBFiles/";
-		fileName += "1.txt";
-		//fileName += to_string(entry.key) + ".txt";
-		FILE* filePtr = fopen(fileName.c_str(), "w");
-		string userTuple = to_string(entry.key) + "\n";
-		fprintf(filePtr, userTuple.c_str());
 		levels.front().runs_list[i]->bPTree->bpt_insert(entry.key, filePtr);
-		fclose(filePtr);
 
         // input to txt file
         input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
@@ -261,7 +252,8 @@ void LSMTree::put(KEY_t key, VAL_t val, BPTree** bPTree) {
     buffer.empty();
     //cout << buffer.entries.size() << endl;
 
-    assert(buffer.put(key, val, bPTree));
+    //assert(buffer.put(key, val, bPTree));
+	assert(buffer.put(key, val));
 }
 
 Run * LSMTree::get_run(int index) {
@@ -937,7 +929,7 @@ void LSMTree::KNN_query2(entry_t query_point, int k) {
 /* B+Tree Range 쿼리 */
 void LSMTree::searchMethod(BPTree* bPTree, KEY_t Lower, KEY_t Upper) {
 	int bpt_IO_Check = 0;	
-
+	cout << "zLSM BPT Range Search" << endl;
 	// IO체크할라고 disk에 있는 B+Tree만 작업했음
 	BPTree* disk_bPTree;
 	for (int i = 0; i < DEFAULT_TREE_DEPTH; i++)
