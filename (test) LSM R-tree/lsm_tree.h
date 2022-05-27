@@ -45,6 +45,7 @@ public:
     void print_tree();
     void save_run();
     void save_file();
+    RTREENODE* root;
     //set<int> Create_Query_filter(VAL_t, float);           // range query
     //void reset_Q_filter();
     //float Compute_Overlap(VAL_t, VAL_t, VAL_t, VAL_t);

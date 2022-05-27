@@ -7,6 +7,7 @@
 #include <map>
 #include <cmath>
 #include <string>
+#include <chrono>
 
 #include "lsm_tree.h"
 #include "merge.h"
@@ -127,6 +128,8 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
         }
 	}
 
+    RTREENODE* root = next->runs_list[i]->root;
+
     for (const auto& entry : current->runs_list[idx]->entries) 
     {
         /*
@@ -135,6 +138,12 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx) {
         levels.front().runs_list[i]->put(tmp);
         */
         next->runs_list[i]->put(entry);
+
+        RTREEMBR* mbr = (RTREEMBR*)malloc(sizeof(RTREEMBR));
+        mbr->bound[0] = mbr->bound[3] = entry.val.x;
+        mbr->bound[1] = mbr->bound[4] = entry.val.y;
+        mbr->bound[2] = mbr->bound[5] = 0;
+        RTreeInsertRect(mbr, next->runs_list[i]->size, &root, 0);
 
         //////////////////////////////////////////////////////////////////////////////
         // input to txt file
@@ -207,9 +216,22 @@ void LSMTree::put(KEY_t key, VAL_t val) {
 
     string input_data;
     char ch_input_data[100];
+    cout << "root ----------------- 1" << endl;
+    RTREENODE* root = levels.front().runs_list[i]->root;
+    cout << "root ----------------- 2" << endl;
 	/* Buffer -> level 1 flush */
     for (const auto& entry : buffer.entries) {
 		levels.front().runs_list[i]->put(entry);
+        cout << "root ----------------- 3" << endl;
+
+        RTREEMBR* mbr = (RTREEMBR*)malloc(sizeof(RTREEMBR));
+        mbr->bound[0] = mbr->bound[3] = entry.val.x;
+        mbr->bound[1] = mbr->bound[4] = entry.val.y;
+        mbr->bound[2] = mbr->bound[5] = 0;
+        cout << "root ----------------- 4" << endl;
+        RTreeInsertRect(mbr, levels.front().runs_list[i]->size, &root, 0);
+        cout << "root ----------------- 5" << endl;
+
         // input to txt file
         input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
         strcpy(ch_input_data, input_data.c_str());
@@ -596,6 +618,28 @@ void LSMTree::save_file()
 
     fclose(fp);       //파일 포인터 닫기//////////////////////////////////////////////////////////////////////<------------this 
 }
+
+//void LSMTree::range_query_r(entry_t query_point, float distance) {
+//    RTREEMBR q = {
+//    {query_point.val.x, query_point.val.y, 0, query_point.val.x, query_point.val.y, 0}   /* search will find above rects that this one overlaps */
+//    };
+//
+//    int result;
+//
+//    auto start = std::chrono::high_resolution_clock::now();
+//    result = RTreeRangeQuery(&root, q, distance);
+//    auto end = std::chrono::high_resolution_clock::now();
+//    std::chrono::microseconds mill = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+//    fprintf(stdout, "Range=%lf / count: %d, time: %lld microsec\n", distance, result, mill.count());
+//
+//    for (int i = 1; i < 6; i++) {
+//        auto start = std::chrono::high_resolution_clock::now();
+//        result = RTreeRangeQuery(&root, q, distance);
+//        auto end = std::chrono::high_resolution_clock::now();
+//        std::chrono::microseconds mill = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+//        fprintf(stdout, "Range=%lf / count: %d, time: %lld microsec\n", distance, result, mill.count());
+//    }
+//}
 
 void LSMTree::range_query(entry_t query_point, float distance)
 {
