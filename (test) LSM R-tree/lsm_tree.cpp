@@ -216,22 +216,17 @@ void LSMTree::put(KEY_t key, VAL_t val) {
 
     string input_data;
     char ch_input_data[100];
-    cout << "root ----------------- 1" << endl;
     RTREENODE* root = levels.front().runs_list[i]->root;
-    cout << "root ----------------- 2" << endl;
-	/* Buffer -> level 1 flush */
+    /* Buffer -> level 1 flush */
     for (const auto& entry : buffer.entries) {
 		levels.front().runs_list[i]->put(entry);
-        cout << "root ----------------- 3" << endl;
-
+        
         RTREEMBR* mbr = (RTREEMBR*)malloc(sizeof(RTREEMBR));
         mbr->bound[0] = mbr->bound[3] = entry.val.x;
         mbr->bound[1] = mbr->bound[4] = entry.val.y;
         mbr->bound[2] = mbr->bound[5] = 0;
-        cout << "root ----------------- 4" << endl;
         RTreeInsertRect(mbr, levels.front().runs_list[i]->size, &root, 0);
-        cout << "root ----------------- 5" << endl;
-
+        
         // input to txt file
         input_data = to_string(entry.val.x) + "  " + to_string(entry.val.y) + "  " + to_string(entry.key) + "\n";
         strcpy(ch_input_data, input_data.c_str());

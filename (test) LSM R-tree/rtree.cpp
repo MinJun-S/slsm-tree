@@ -370,19 +370,12 @@ static int _RTreeInsertRect(RTREEMBR* rc, int tid, RTREENODE* node, RTREENODE** 
     {
         i = RTreePickBranch(rc, node);
 
-        cout << "RTreePickBranch : " << i << endl;
-        cout << "node->branch[i].child->level : " << node->branch[i].child->level << endl;
-        
         if (!_RTreeInsertRect(rc, tid, node->branch[i].child, &n2, level))
         {
-            cout << "_RTreeInsertRect : " << i << endl;
             /* child was not split */
             node->branch[i].mbr = RTreeCombineRect(rc, &(node->branch[i].mbr));
             return 0;
         }
-
-        cout << node->branch[i].mbr.bound[0] << endl;
-        cout << node->branch[i].mbr.bound[1] << endl;
 
         /* child was split */
         node->branch[i].mbr = RTreeNodeCover(node->branch[i].child);

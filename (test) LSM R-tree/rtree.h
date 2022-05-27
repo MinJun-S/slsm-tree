@@ -21,7 +21,7 @@
 #define  RTREE_H_INCLUDED
 
 /* PAGE_SIZE is normally the natural page size of the machine */
-#define  PAGE_SIZE    4096
+#define  PAGE_SIZE    512
 #define  DIMS_NUMB    3       /* number of dimensions */
 #define  SIDES_NUMB   2*DIMS_NUMB
 

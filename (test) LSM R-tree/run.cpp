@@ -34,7 +34,7 @@ Run::Run(long max_size, float bf_bits_per_entry, int idx_level) :
 
     string run_name = to_string(idx_level) + "_";  // maybe remove!!!!
 
-    RTREENODE* root = RTreeCreate();
+    root = RTreeCreate();
 }
 
 Run::~Run(void) {
