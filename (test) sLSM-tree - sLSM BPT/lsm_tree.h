@@ -28,6 +28,8 @@ using namespace std;
 #define GEO_Y_MIN  33.10000000
 #define GEO_Y_MAX  38.45000000
 
+#define LIMIT_LEVEL 4
+
 class LSMTree {
     Buffer buffer;
     WorkerPool worker_pool;
@@ -57,6 +59,7 @@ public:
     void KNN_query1(entry_t, int);
     void KNN_query2(entry_t, int);
     int KNN_query1_bptree(entry_t, int);
+    int KNN_query2_bptree(entry_t, int);
     //set<pair<float, entry_t>> NN_range(int, int, entry_t, float);
     
 	int IO_Check;

@@ -203,7 +203,7 @@ void command_loop(LSMTree& tree) {
             entry.val.y = val.y;
             entry.key = make_key(val.x, val.y);
 
-            tree.KNN_query2(entry, k);
+            tree.KNN_query2_bptree(entry, k);
             cout << " * I/O Check = " << tree.IO_Check << endl;
             tree.IO_Check = 0;
             break;

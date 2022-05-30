@@ -43,8 +43,10 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
 	int depth_run = depth;
 	max_run_size = buffer_max_entries;
 
+    int max_run_cnt = pow(4, LIMIT_LEVEL);
+
 	while ((depth--) > 0) {
-		if (fanout < 64) {
+		if (fanout < max_run_cnt) {
 			//if (fanout < 256) {
 			fanout *= 4;
 		}
@@ -55,121 +57,29 @@ LSMTree::LSMTree(int buffer_max_entries, int depth, int fanout,
 		levels.emplace_back(fanout, max_run_size);
 	}
 
-	current = levels.begin();
-	int cnt = 0;
-	// 원본 코드
-	while ((depth_run--) > 0) {
-		cnt += 1;
-		if (cnt == 1) {
-			int temp = KEY_MAX / 4;
-			for (int i = 0; i < 4; i++) {
-				min_key = temp * i;
-				max_key = temp * (i + 1) - 1;
-				Run* tmp1 = new Run(current->max_run_size, bf_bits_per_entry, max_key, min_key, 1, i);
-				current->runs_list[i] = tmp1;
-				current->runs_list[i]->spatial_filter[0] = 0; current->runs_list[i]->spatial_filter[1] = 0; current->runs_list[i]->spatial_filter[2] = 0; current->runs_list[i]->spatial_filter[3] = 0;
-			}
-		}
-		else if (cnt == 2) {
-			int temp = KEY_MAX / 16;
-			for (int i = 0; i < 16; i++) {
-				min_key = temp * i;
-				max_key = temp * (i + 1) - 1;
-				Run* tmp1 = new Run(current->max_run_size, bf_bits_per_entry, max_key, min_key, 2, i);
-				current->runs_list[i] = tmp1;
-				current->runs_list[i]->spatial_filter[0] = 0; current->runs_list[i]->spatial_filter[1] = 0; current->runs_list[i]->spatial_filter[2] = 0; current->runs_list[i]->spatial_filter[3] = 0;
-			}
-		}
-		else {
-			int temp = KEY_MAX / 64;
-			for (int i = 0; i < 64; i++) {
-				min_key = temp * i;
-				max_key = temp * (i + 1) - 1;
-				Run* tmp1 = new Run(current->max_run_size, bf_bits_per_entry, max_key, min_key, cnt, i);
-				current->runs_list[i] = tmp1;
-				current->runs_list[i]->spatial_filter[0] = 0; current->runs_list[i]->spatial_filter[1] = 0; current->runs_list[i]->spatial_filter[2] = 0; current->runs_list[i]->spatial_filter[3] = 0;
-			}
-		}
+    current = levels.begin();
+    int cnt = 0;
+    int temp_run_cnt = 0;
+    // 원본 코드
+    while ((depth_run--) > 0) {
+        cnt += 1;
+        temp_run_cnt = pow(4, cnt);
+
+        if (temp_run_cnt > max_run_cnt) {
+            temp_run_cnt = max_run_cnt;
+        }
+        int temp = KEY_MAX / temp_run_cnt;
+        for (int i = 0; i < temp_run_cnt; i++) {
+            min_key = temp * i;
+            max_key = temp * (i + 1) - 1;
+            Run* tmp1 = new Run(current->max_run_size, bf_bits_per_entry, max_key, min_key, cnt, i);
+            current->runs_list[i] = tmp1;
+            current->runs_list[i]->spatial_filter[0] = 0; current->runs_list[i]->spatial_filter[1] = 0; current->runs_list[i]->spatial_filter[2] = 0; current->runs_list[i]->spatial_filter[3] = 0;
+        }
 		//cout << cnt << endl;
 		cout << "Level~~~> " << current->runs_list[0]->idx_level << endl;
 		current += 1;
 	}
-
-	////// level 2까지만 분할 버전 //  ---------> 스파셜 필터 주석처리해둠!!!!!!!!!!!!!!
-	////while ((depth_run--) > 0) {
-	////	cnt += 1;
-	////	if (cnt == 1) {
-	////		int temp = KEY_MAX / 4;
-	////		for (int i = 0; i < 4; i++) {
-	////			min_key = temp * i;
-	////			max_key = temp * (i + 1) - 1;
-	////			Run* tmp1 = new Run(current->max_run_size, bf_bits_per_entry, max_key, min_key, 1, i);
-	////			current->runs_list[i] = tmp1;
-	////			current->runs_list[i]->spatial_filter[0] = 0; current->runs_list[i]->spatial_filter[1] = 0; current->runs_list[i]->spatial_filter[2] = 0; current->runs_list[i]->spatial_filter[3] = 0;
-	////		}
-	////	}
-	////	else {
-	////		int temp = KEY_MAX / 16;
-	////		for (int i = 0; i < 16; i++) {
-	////			min_key = temp * i;
-	////			max_key = temp * (i + 1) - 1;
-	////			Run* tmp1 = new Run(current->max_run_size, bf_bits_per_entry, max_key, min_key, cnt, i);
-	////			current->runs_list[i] = tmp1;
-	////			current->runs_list[i]->spatial_filter[0] = 0; current->runs_list[i]->spatial_filter[1] = 0; current->runs_list[i]->spatial_filter[2] = 0; current->runs_list[i]->spatial_filter[3] = 0;
-	////		}
-	////	}
-	////	//cout << cnt << endl;
-	////	cout << "Level~~~> " << current->runs_list[0]->idx_level << endl;
-	////	current += 1;
-	////}
-
-	//////// level 4부터 분할하는 걸로 수정
- //////   while ((depth_run--) > 0) {
- //////       cnt += 1;
- //////       if (cnt == 1) {
- //////           int temp = KEY_MAX / 4;
- //////           for (int i = 0; i < 4; i++) {
- //////               min_key = temp * i;
- //////               max_key = temp * (i + 1) - 1; 
- //////               Run* tmp1 = new Run(current->max_run_size, bf_bits_per_entry, max_key, min_key, 1, i);                
- //////               current->runs_list[i] = tmp1;
- //////               current->runs_list[i]->spatial_filter[0] = 0; current->runs_list[i]->spatial_filter[1] = 0; current->runs_list[i]->spatial_filter[2] = 0; current->runs_list[i]->spatial_filter[3] = 0;
- //////           }
- //////       }
- //////       else if (cnt == 2) {
- //////           int temp = KEY_MAX / 16;
- //////           for (int i = 0; i < 16; i++) {
- //////               min_key = temp * i;
- //////               max_key = temp * (i + 1) - 1;
- //////               Run* tmp1 = new Run(current->max_run_size, bf_bits_per_entry, max_key, min_key, 2, i);
- //////               current->runs_list[i] = tmp1;
- //////               current->runs_list[i]->spatial_filter[0] = 0; current->runs_list[i]->spatial_filter[1] = 0; current->runs_list[i]->spatial_filter[2] = 0; current->runs_list[i]->spatial_filter[3] = 0;
- //////           }
- //////       }
-	//////	else if (cnt == 3) {
-	//////		int temp = KEY_MAX / 64;
-	//////		for (int i = 0; i < 64; i++) {
-	//////			min_key = temp * i;
-	//////			max_key = temp * (i + 1) - 1;
-	//////			Run* tmp1 = new Run(current->max_run_size, bf_bits_per_entry, max_key, min_key, cnt, i);
-	//////			current->runs_list[i] = tmp1;
-	//////			current->runs_list[i]->spatial_filter[0] = 0; current->runs_list[i]->spatial_filter[1] = 0; current->runs_list[i]->spatial_filter[2] = 0; current->runs_list[i]->spatial_filter[3] = 0;
-	//////		}
-	//////	}
- //////       else {
- //////           int temp = KEY_MAX / 256;
- //////           for (int i = 0; i < 256; i++) {
- //////               min_key = temp * i;
- //////               max_key = temp * (i + 1) - 1;
- //////               Run* tmp1 = new Run(current->max_run_size, bf_bits_per_entry, max_key, min_key, cnt, i);
- //////               current->runs_list[i] = tmp1;
- //////               current->runs_list[i]->spatial_filter[0] = 0; current->runs_list[i]->spatial_filter[1] = 0; current->runs_list[i]->spatial_filter[2] = 0; current->runs_list[i]->spatial_filter[3] = 0;
- //////           }
- //////       }
- //////       //cout << cnt << endl;
-	//////	cout << "Level~~~> " << current->runs_list[0]->idx_level << endl;
- //////       current += 1;
- //////   }
 }
 
 void LSMTree::merge_down(vector<Level>::iterator current, int idx, FILE* filePtr) {
@@ -213,7 +123,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx, FILE* filePtr
 	FILE* fp = NULL;
 	int size_check;
 
-	if (current->runs_list[idx]->idx_level < 3) {
+	if (current->runs_list[idx]->idx_level < LIMIT_LEVEL) {
 		//if (current->runs_list[idx]->idx_level < 4) {
 		temp = KEY_MAX / pow(4, current->runs_list[idx]->idx_level);    // 공간필터 알맞게 계산용
 
@@ -300,7 +210,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx, FILE* filePtr
 
 	}
 	else {
-		temp = KEY_MAX / pow(4, 2);    // 공간필터 알맞게 계산용 (임계 레벨 넘어가면 분할X 임계값만 2배수)
+		temp = KEY_MAX / pow(4, LIMIT_LEVEL);    // 공간필터 알맞게 계산용 (임계 레벨 넘어가면 분할X 임계값만 2배수)
 
 		//// I/O Check
 	 //   if (next->runs_list[idx]->entries.begin()->key != 0) {
@@ -348,7 +258,7 @@ void LSMTree::merge_down(vector<Level>::iterator current, int idx, FILE* filePtr
 	 * if the next level does not have space for the current level,
 	 * recursively merge the next level downwards to create some
 	 */
-	if (current->runs_list[idx]->idx_level < 3) {
+	if (current->runs_list[idx]->idx_level < LIMIT_LEVEL) {
 		//if (current->runs_list[idx]->idx_level < 4) {
 		for (int i = 4 * idx; i < 4 * idx + 4; i++) {
 			if (next->runs_list[i]->remaining() <= 0) {
@@ -1249,9 +1159,6 @@ int LSMTree::KNN_query1_bptree(entry_t query_point, int k)
     // IO체크할라고 disk에 있는 B+Tree만 작업했음
     BPTree* disk_bPTree;
 
-
-    Q_filter = Create_Query_filter(query_point.val, distance);
-
     int cnt = 0;
     for (const auto& Q_iter : Q_filter) {
         cout << Q_iter << endl;
@@ -1260,13 +1167,14 @@ int LSMTree::KNN_query1_bptree(entry_t query_point, int k)
     cout << "Q_filter cnt : " << cnt << endl;
     //// [ Disk ] 앞뒤 2/k 만큼 돌려서 나온 최종 k개 결과값을 k_result에 input //// 
     for (int i = 0; i < DEFAULT_TREE_DEPTH; i++) {
-        if (i < 3) {
+        Q_filter = Create_Query_filter(query_point.val, distance);
+        if (i < LIMIT_LEVEL) {
             int temp = -1;                                                          // 쿼리필터에 값(=숫자)가 아무거나 있으면 Range query 수행
 
             for (const auto& Q_iter : Q_filter) {
                 //for (iter = Q_filter.begin(); iter != Q_filter.end(); iter++) {
                     //int check_run = (*iter) / pow(4, 2 - i);                          // Matchting {Q_filter size and Full size}
-                int check_run = Q_iter / pow(4, 2 - i);                             // Matchting {Q_filter size and Full size}
+                int check_run = Q_iter / pow(4, (LIMIT_LEVEL - 1) - i);               // Matchting {Q_filter size and Full size}
                 if (check_run != temp) {                                            // 쿼리필터에 값(=숫자)가 아무거나 있으면 Range query 수행
 
                     if (levels[i].runs_list[check_run]->spatial_filter[0] == 0 && levels[i].runs_list[check_run]->spatial_filter[1] == 0 && levels[i].runs_list[check_run]->spatial_filter[2] == 0 && levels[i].runs_list[check_run]->spatial_filter[3] == 0) {
@@ -1409,9 +1317,244 @@ int LSMTree::KNN_query1_bptree(entry_t query_point, int k)
     cout << "-------------------------------------------------------------------------------------" << endl;
     cout << "[     X             Y             KEY          Distance ]" << endl;
     cout << left;
-    for (auto it = k_result.begin(); it != k_result.end(); it++) {
+    /*for (auto it = k_result.begin(); it != k_result.end(); it++) {
         cout << setw(9) << (*it).second.val.x << "  |  " << setw(9) << (*it).second.val.y << "  |  " << setw(11) << (*it).second.key << "  |  " << setw(9) << (*it).first << endl;
+    }*/
+
+    Q_filter.clear();
+
+    //cout << "I/O Check : " << knn_IO_Check << endl;
+    return knn_IO_Check;
+}
+
+//// [ Bottom - Up ] ////
+int LSMTree::KNN_query2_bptree(entry_t query_point, int k)
+{
+    entry_t entry;
+    set<pair<float, entry_t>> k_result;                             // k Result set
+    float distance = 0;
+    float compute_d = 8.656678713232676;
+    set<int> Q_filter;
+    set<entry_t>::iterator l_k; set<entry_t>::iterator u_k;
+    set<entry_t>::iterator k_temp;
+
+    set<pair<float, entry_t>> temp_result;
+    set<int>::iterator Q_iter;
+    set<pair<float, entry_t>>::iterator iter_result;
+
+    set<pair<float, entry_t>>::iterator temp_set;
+
+    int knn_IO_Check = 0;
+
+    if (buffer.entries.size() > 0) {
+        l_k = u_k = buffer.entries.lower_bound(query_point);
+
+        // 앞뒤로 k/2씩 이동해서 k개 범위 도출 
+        for (int i = 0; i <= k; i++) {
+            if (compute_d > Compute_distance(query_point, *l_k)) {
+                compute_d = Compute_distance(query_point, *l_k);
+                k_temp = l_k;
+            }
+            if (compute_d > Compute_distance(query_point, *u_k)) {
+                compute_d = Compute_distance(query_point, *u_k);
+                k_temp = u_k;
+            }
+            l_k--;
+            u_k++;
+        }
+
+        // 2/k만큼 query_point로부터 가까운 진짜 LB, UB설정
+        l_k = u_k = k_temp;
+        for (int i = 0; i <= k; i++) {
+            temp_result.insert({ Compute_distance(query_point, *u_k) ,*u_k });
+            temp_result.insert({ Compute_distance(query_point, *l_k) ,*l_k });
+            l_k--;
+            u_k++;
+        }
+
+        //// [ Buffer ] 앞뒤 2/k 만큼 돌려서 나온 최종 k개 결과값을 k_result에 input //// 
+
+        for (iter_result = temp_result.begin(); iter_result != temp_result.end(); iter_result++) {
+            if (k_result.size() < k) {
+                k_result.insert({ Compute_distance(query_point, (*iter_result).second), (*iter_result).second });
+            }
+            else {
+                temp_set = k_result.end();
+                temp_set--;
+                distance = (*temp_set).first;
+                temp_result.clear();
+                break;
+            }
+        }
     }
+    else {
+        distance = 8.656678713232676;
+    }
+
+    // IO체크할라고 disk에 있는 B+Tree만 작업했음
+    BPTree* disk_bPTree;
+
+    int cnt = 0;
+    for (const auto& Q_iter : Q_filter) {
+        cout << Q_iter << endl;
+        cnt++;
+    }
+    cout << "Q_filter cnt : " << cnt << endl;
+    //// [ Disk ] 앞뒤 2/k 만큼 돌려서 나온 최종 k개 결과값을 k_result에 input //// 
+    for (int i = DEFAULT_TREE_DEPTH - 1; i >= 0; i--) {
+        Q_filter = Create_Query_filter(query_point.val, distance);
+        if (i < LIMIT_LEVEL) {
+            int temp = -1;                                                          // 쿼리필터에 값(=숫자)가 아무거나 있으면 Range query 수행
+
+            for (const auto& Q_iter : Q_filter) {
+                //for (iter = Q_filter.begin(); iter != Q_filter.end(); iter++) {
+                    //int check_run = (*iter) / pow(4, 2 - i);                          // Matchting {Q_filter size and Full size}
+                int check_run = Q_iter / pow(4, (LIMIT_LEVEL - 1) - i);               // Matchting {Q_filter size and Full size}
+                if (check_run != temp) {                                            // 쿼리필터에 값(=숫자)가 아무거나 있으면 Range query 수행
+
+                    if (levels[i].runs_list[check_run]->spatial_filter[0] == 0 && levels[i].runs_list[check_run]->spatial_filter[1] == 0 && levels[i].runs_list[check_run]->spatial_filter[2] == 0 && levels[i].runs_list[check_run]->spatial_filter[3] == 0) {
+                        temp = check_run;
+                        continue;
+                    }
+
+                    l_k = u_k = levels[i].runs_list[check_run]->entries.lower_bound(query_point);
+
+                    // Bptree IO_Check
+                    disk_bPTree = levels[i].runs_list[check_run]->bPTree;
+                    knn_IO_Check += disk_bPTree->bpt_knn(query_point.key, distance, 0, k);
+
+                    // 앞뒤로 k/2씩 이동해서 k개 출력
+                    compute_d = 8.656678713232676;
+                    for (int i = 0; i <= k; i++) {
+                        if (compute_d > Compute_distance(query_point, *l_k)) {
+                            compute_d = Compute_distance(query_point, *l_k);
+                            k_temp = l_k;
+                        }
+                        if (compute_d > Compute_distance(query_point, *u_k)) {
+                            compute_d = Compute_distance(query_point, *u_k);
+                            k_temp = u_k;
+                        }
+                        l_k--;
+                        u_k++;
+                    }
+
+                    l_k = u_k = k_temp;
+                    compute_d = 0;
+                    for (int i = 0; i <= k; i++) {
+                        temp_result.insert({ Compute_distance(query_point, *u_k) ,*u_k });
+                        temp_result.insert({ Compute_distance(query_point, *l_k) ,*l_k });
+                        l_k--;
+                        u_k++;
+                    }
+
+                    // compute_d만큼 range를 돌려서 결과를 temp_result에 input
+                    // range query <-- level, idx, query_point, distance
+                    //cout << compute_d << endl;
+                    //temp_result = NN_range(i, check_run, query_point, compute_d);
+                    for (iter_result = temp_result.begin(); iter_result != temp_result.end(); iter_result++) {
+                        if ((*iter_result).first < distance) {
+                            k_result.insert(*iter_result);
+
+                            if (k_result.size() > k) {
+                                temp_set = k_result.end();
+                                temp_set--;
+                                k_result.erase(*temp_set);
+                            }
+
+                            temp_set = k_result.end();
+                            temp_set--;
+                            distance = (*temp_set).first;
+                        }
+                        else {
+                            temp_result.clear();
+                            break;
+                        }
+                    }
+                    temp = check_run;
+
+                    //IO_Check = IO_Check + int(levels[i].runs_list[check_run]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+                    //if (levels[i].runs_list[check_run]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+                    //    IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+                    //}
+                }
+            }
+        } // Disk Level 3 ~
+        else {
+            for (const auto& Q_iter : Q_filter) {
+                //for (iter = Q_filter.begin(); iter != Q_filter.end(); iter++) {
+                    //int check_run = (*iter) / pow(4, 2 - i);                        // Matchting {Q_filter size and Full size}
+                int check_run = Q_iter;                        // Matchting {Q_filter size and Full size}
+
+                if (levels[i].runs_list[check_run]->spatial_filter[0] == 0 && levels[i].runs_list[check_run]->spatial_filter[1] == 0 && levels[i].runs_list[check_run]->spatial_filter[2] == 0 && levels[i].runs_list[check_run]->spatial_filter[3] == 0) {
+                    continue;
+                }
+
+                l_k = u_k = levels[i].runs_list[check_run]->entries.lower_bound(query_point);
+
+                // Bptree IO_Check
+                disk_bPTree = levels[i].runs_list[check_run]->bPTree;
+                knn_IO_Check += disk_bPTree->bpt_knn(query_point.key, distance, 0, k);
+
+                // 앞뒤로 k/2씩 이동해서 k개 출력
+                compute_d = 8.656678713232676;
+                for (int i = 0; i <= k; i++) {
+                    if (compute_d > Compute_distance(query_point, *l_k)) {
+                        compute_d = Compute_distance(query_point, *l_k);
+                        k_temp = l_k;
+                    }
+                    if (compute_d > Compute_distance(query_point, *u_k)) {
+                        compute_d = Compute_distance(query_point, *u_k);
+                        k_temp = u_k;
+                    }
+                    l_k--;
+                    u_k++;
+                }
+
+                l_k = u_k = k_temp;
+                for (int i = 0; i <= k; i++) {
+                    temp_result.insert({ Compute_distance(query_point, *u_k) ,*u_k });
+                    temp_result.insert({ Compute_distance(query_point, *l_k) ,*l_k });
+                    l_k--;
+                    u_k++;
+                }
+                // compute_d만큼 range를 돌려서 결과를 temp_result에 input
+                // range query <-- level, idx, query_point, distance
+                //temp_result = NN_range(i, check_run, query_point, compute_d);
+                for (iter_result = temp_result.begin(); iter_result != temp_result.end(); iter_result++) {
+                    if ((*iter_result).first < distance) {
+                        k_result.insert(*iter_result);
+
+                        if (k_result.size() > k) {
+                            temp_set = k_result.end();
+                            temp_set--;
+                            k_result.erase(*temp_set);
+                        }
+
+                        temp_set = k_result.end();
+                        temp_set--;
+                        distance = (*temp_set).first;
+                    }
+                    else {
+                        temp_result.clear();
+                        break;
+                    }
+                }
+                //IO_Check = IO_Check + int(levels[i].runs_list[check_run]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+                //if (levels[i].runs_list[check_run]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+                //    IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+                //}
+            }
+        }
+    }
+
+    //return k_result;
+    cout << "\n* kNN Result " << endl;
+    cout << "-------------------------------------------------------------------------------------" << endl;
+    cout << "[     X             Y             KEY          Distance ]" << endl;
+    cout << left;
+    /*for (auto it = k_result.begin(); it != k_result.end(); it++) {
+        cout << setw(9) << (*it).second.val.x << "  |  " << setw(9) << (*it).second.val.y << "  |  " << setw(11) << (*it).second.key << "  |  " << setw(9) << (*it).first << endl;
+    }*/
 
     Q_filter.clear();
 
@@ -1458,24 +1601,22 @@ void LSMTree::searchMethod(entry_t query_point, float distance) {
 	// IO체크할라고 disk에 있는 B+Tree만 작업했음
 	BPTree* disk_bPTree;
 	//////////// [ Range Query in Disk Level ] //////////// 
-	for (int i = 0; i <= DEFAULT_TREE_DEPTH; i++)
+	for (int i = 0; i < DEFAULT_TREE_DEPTH; i++)
 	{
 		cout << "\n* Disk Level " << i + 1 << " Result " << endl;
 		cout << "-------------------------------------------------------------------------------------" << endl;
 		cout << "[   X             Y             KEY          Distance         Run Index ]" << endl;
 
-		if (i < 3) {
+		if (i < LIMIT_LEVEL) {
 			int temp = -1;                                                          // 쿼리필터에 값(=숫자)가 아무거나 있으면
 			for (const auto& iter : Q_filter) {
 				//for (iter = Q_filter.begin(); iter != Q_filter.end(); iter++) {
 					//int check_run = (*iter) / pow(4, 2 - i);                    
-				int check_run = iter / pow(4, 2 - i);                               // Matchting {Q_filter size and Full size}
+				int check_run = iter / pow(4, (LIMIT_LEVEL - 1) - i);                               // Matchting {Q_filter size and Full size}
 
 				if (check_run != temp) {  // 쿼리필터에 값(=숫자)가 아무거나 있으면 Range query 수행
 					// Disk Run Filtering by using Q_filter
-					cout << "test----------------------------------spatial_filter" << endl;
 					if (current_level->runs_list[check_run]->spatial_filter[0] == 0 && current_level->runs_list[check_run]->spatial_filter[1] == 0 && current_level->runs_list[check_run]->spatial_filter[2] == 0 && current_level->runs_list[check_run]->spatial_filter[3] == 0) {
-						cout << "test----------------------------------spatial_filter-----------------------check" << endl;
 						continue;
 					}
 
@@ -1565,33 +1706,122 @@ set<int> LSMTree::Create_Query_filter(VAL_t query_val, float range)
 		int y;
 	};
 
-	struct coordinate zindex[64] = {
-		{0,0},{0,1},{1,0},{1,1},
-		{0,2},{0,3},{1,2},{1,3},
-		{2,0},{2,1},{3,0},{3,1},
-		{2,2},{2,3},{3,2},{3,3},
+    //struct coordinate zindex[16] = {
+    //    {0,0},{0,1},{1,0},{1,1},
+    //    {0,2},{0,3},{1,2},{1,3},
+    //    {2,0},{2,1},{3,0},{3,1},
+    //    {2,2},{2,3},{3,2},{3,3}  ////// 32 z-order num(x,y) in right
+    //};
 
-		{0,4},{0,5},{1,4},{1,5},
-		{0,6},{0,7},{1,6},{1,7},
-		{2,4},{2,5},{3,4},{3,5},
-		{2,6},{2,7},{3,6},{3,7},  ////// 32 z-order num(x,y) in left
+    //struct coordinate zindex[64] = {
+    //    {0,0},{0,1},{1,0},{1,1},
+    //    {0,2},{0,3},{1,2},{1,3},
+    //    {2,0},{2,1},{3,0},{3,1},
+    //    {2,2},{2,3},{3,2},{3,3},
 
-		{4,0},{4,1},{5,0},{5,1},
-		{4,2},{4,3},{5,2},{5,3},
-		{6,0},{6,1},{7,0},{7,1},
-		{6,2},{6,3},{7,2},{7,3},
+    //    {0,4},{0,5},{1,4},{1,5},
+    //    {0,6},{0,7},{1,6},{1,7},
+    //    {2,4},{2,5},{3,4},{3,5},
+    //    {2,6},{2,7},{3,6},{3,7},  ////// 32 z-order num(x,y) in left
 
-		{4,4},{4,5},{5,4},{5,5},
-		{4,6},{4,7},{5,6},{5,7},
-		{6,4},{6,5},{7,4},{7,5},
-		{6,6},{6,7},{7,6},{7,7}  ////// 32 z-order num(x,y) in right
-	};
+    //    {4,0},{4,1},{5,0},{5,1},
+    //    {4,2},{4,3},{5,2},{5,3},
+    //    {6,0},{6,1},{7,0},{7,1},
+    //    {6,2},{6,3},{7,2},{7,3},
+
+    //    {4,4},{4,5},{5,4},{5,5},
+    //    {4,6},{4,7},{5,6},{5,7},
+    //    {6,4},{6,5},{7,4},{7,5},
+    //    {6,6},{6,7},{7,6},{7,7}  ////// 32 z-order num(x,y) in right
+    //};
+
+    struct coordinate zindex[256] = {
+        {0,0},{0,1},{1,0},{1,1},
+        {0,2},{0,3},{1,2},{1,3},
+        {2,0},{2,1},{3,0},{3,1},
+        {2,2},{2,3},{3,2},{3,3},
+
+        {0,4},{0,5},{1,4},{1,5},
+        {0,6},{0,7},{1,6},{1,7},
+        {2,4},{2,5},{3,4},{3,5},
+        {2,6},{2,7},{3,6},{3,7},  ////// 32 z-order num(x,y) in left
+
+        {4,0},{4,1},{5,0},{5,1},
+        {4,2},{4,3},{5,2},{5,3},
+        {6,0},{6,1},{7,0},{7,1},
+        {6,2},{6,3},{7,2},{7,3},
+
+        {4,4},{4,5},{5,4},{5,5},
+        {4,6},{4,7},{5,6},{5,7},
+        {6,4},{6,5},{7,4},{7,5},
+        {6,6},{6,7},{7,6},{7,7},  ////// 64 z-order num(x,y) in right
+
+        {0,8},{0,9},{1,8},{1,9},
+        {0,10},{0,11},{1,10},{1,11},
+        {2,8},{2,9},{3,8},{3,9},
+        {2,10},{2,11},{3,10},{3,11},
+
+        {0,12},{0,13},{1,12},{1,13},
+        {0,14},{0,15},{1,14},{1,15},
+        {2,12},{2,13},{3,12},{3,13},
+        {2,14},{2,15},{3,14},{3,15},
+
+        {4,8},{4,9},{5,8},{5,9},
+        {4,10},{4,11},{5,10},{5,11},
+        {6,8},{6,9},{7,8},{7,9},
+        {6,10},{6,11},{7,10},{7,11},
+
+        {4,12},{4,13},{5,12},{5,13},
+        {4,14},{4,15},{5,14},{5,15},
+        {6,12},{6,13},{7,12},{7,13},
+        {6,14},{6,15},{7,14},{7,15},  ////// 128 z-order num(x,y) in right
+
+        {8,0},{8,1},{9,0},{9,1},
+        {8,2},{8,3},{9,2},{9,3},
+        {10,0},{10,1},{11,0},{11,1},
+        {10,2},{10,3},{11,2},{11,3},
+
+        {8,4},{8,5},{9,4},{9,5},
+        {8,6},{8,7},{9,6},{9,7},
+        {10,4},{10,5},{11,4},{11,5},
+        {10,6},{10,7},{11,6},{11,7},
+
+        {12,0},{12,1},{13,0},{13,1},
+        {12,2},{12,3},{13,2},{13,3},
+        {14,0},{14,1},{15,0},{15,1},
+        {14,2},{14,3},{15,2},{15,3},
+
+        {12,4},{12,5},{13,4},{13,5},
+        {12,6},{12,7},{13,6},{13,7},
+        {14,4},{14,5},{15,4},{15,5},
+        {14,6},{14,7},{15,6},{15,7},  ////// 192 z-order num(x,y) in right
+
+        {8,8},{8,9},{9,8},{9,9},
+        {8,10},{8,11},{9,10},{9,11},
+        {10,8},{10,9},{11,8},{11,9},
+        {10,10},{10,11},{11,10},{11,11},
+
+        {8,12},{8,13},{9,12},{9,13},
+        {8,14},{8,15},{9,14},{9,15},
+        {10,12},{10,13},{11,12},{11,13},
+        {10,14},{10,15},{11,14},{11,15},
+
+        {12,8},{12,9},{13,8},{13,9},
+        {12,10},{12,11},{13,10},{13,11},
+        {14,8},{14,9},{15,8},{15,9},
+        {14,10},{14,11},{15,10},{15,11},
+
+        {12,12},{12,13},{13,12},{13,13},
+        {12,14},{12,15},{13,14},{13,15},
+        {14,12},{14,13},{15,12},{15,13},
+        {14,14},{14,15},{15,14},{15,15}  ////// 256 z-order num(x,y) in right
+    };
 
 	// Compute lower and upper of each MBR and Overlap Check with range of query_value
-	x_size = (GEO_X_MAX - GEO_X_MIN) / 8;
-	y_size = (GEO_Y_MAX - GEO_Y_MIN) / 8;
+    x_size = (GEO_X_MAX - GEO_X_MIN) / pow(2, LIMIT_LEVEL);
+	y_size = (GEO_Y_MAX - GEO_Y_MIN) / pow(2, LIMIT_LEVEL);
 
-	for (int i = 0; i < 64; i++) {     // 64
+	for (int i = 0; i < pow(4, LIMIT_LEVEL); i++) {     // 64
 		min_key.x = (x_size * zindex[i].x) + GEO_X_MIN;
 		min_key.y = (y_size * zindex[i].y) + GEO_Y_MIN;
 		max_key.x = ((x_size * (zindex[i].x + 1))) + GEO_X_MIN - 0.001;
