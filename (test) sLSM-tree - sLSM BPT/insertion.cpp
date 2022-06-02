@@ -286,7 +286,7 @@ int BPTree::bpt_search(KEY_t Lower, KEY_t Upper, int bpt_IO_Check) {
 			}*/
 
 			if (cursor->keys[idx] >= Lower && cursor->keys[idx] <= Upper) {
-				//cout << "* Find idx : " << to_string(cursor->keys[idx]) << endl;  //오래걸려서 주석처리함
+				//cout << "* Find geohash : " << to_string(cursor->keys[idx]) << endl;  //오래걸려서 주석처리함
 			}
 			else if (cursor->keys[idx] > Upper) {
 				cout << "component done" << endl;
