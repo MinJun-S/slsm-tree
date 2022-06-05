@@ -135,27 +135,56 @@ void command_loop(LSMTree& tree) {
 					MBR_UB_t MBR_UB;  					
 
 					float sw_x, sw_y, nw_x, nw_y, se_x, se_y, ne_x, ne_y;
-					fscanf(file, "p %f %f, %f %f, %f %f, %f %f\n", &sw_x, &sw_y, &nw_x, &nw_y, &se_x, &se_y, &ne_x, &ne_y);
-					
+					//fscanf(file, "p %f %f, %f %f, %f %f, %f %f\n", &sw_x, &sw_y, &nw_x, &nw_y, &se_x, &se_y, &ne_x, &ne_y);
+					//
+					//MBR_LB.x = sw_x;
+					//MBR_LB.y = sw_y;
+					//MBR_UB.x = ne_x;
+					//MBR_UB.y = ne_y;
+
+					///* 데이터셋에서 MBR 한 변의 길이를 최대 -> Comp의 변 1개로 했을 경우 (MBR의 꼭짓점만 넣으면 빌드 가능) */
+					//val.x = sw_x; val.y = sw_y;
+					//tree.put(make_key(val.x, val.y), val, filePtr, MBR_LB, MBR_UB, poly_name);
+					//val.x = 0.0; val.y = 0.0;
+					//
+					//val.x = nw_x; val.y = nw_y;
+					//tree.put(make_key(val.x, val.y), val, filePtr, MBR_LB, MBR_UB, poly_name);
+					//val.x = 0.0; val.y = 0.0;
+
+					//val.x = se_x; val.y = se_y;
+					//tree.put(make_key(val.x, val.y), val, filePtr, MBR_LB, MBR_UB, poly_name);
+					//val.x = 0.0; val.y = 0.0;
+
+					//val.x = ne_x; val.y = ne_y;
+					//tree.put(make_key(val.x, val.y), val, filePtr, MBR_LB, MBR_UB, poly_name);
+					//val.x = 0.0; val.y = 0.0;
+
+					fscanf(file, "p %f %f, %f %f\n", &sw_x, &sw_y, &ne_x, &ne_y);
+
 					MBR_LB.x = sw_x;
 					MBR_LB.y = sw_y;
 					MBR_UB.x = ne_x;
 					MBR_UB.y = ne_y;
 
+					/*float dist_x = ne_x - sw_x;
+					float dist_y = ne_y - sw_y;*/
+
 					/* 데이터셋에서 MBR 한 변의 길이를 최대 -> Comp의 변 1개로 했을 경우 (MBR의 꼭짓점만 넣으면 빌드 가능) */
 					val.x = sw_x; val.y = sw_y;
-					tree.put(make_key(val.x, val.y), val, filePtr, MBR_LB, MBR_UB, poly_name);
+					tree.put(make_key(val.x, val.y), val, filePtr, MBR_LB, MBR_UB, poly_name);   // SW
 
-					val.x = nw_x; val.y = nw_y;
-					tree.put(make_key(val.x, val.y), val, filePtr, MBR_LB, MBR_UB, poly_name);
+					val.x = sw_x;
+					val.y = ne_y;
+					tree.put(make_key(val.x, val.y), val, filePtr, MBR_LB, MBR_UB, poly_name);   // NW (x그대로, y만 증가)
 
-					val.x = se_x; val.y = se_y;
-					tree.put(make_key(val.x, val.y), val, filePtr, MBR_LB, MBR_UB, poly_name);
+					val.x = ne_x;
+					val.y = sw_y;
+					tree.put(make_key(val.x, val.y), val, filePtr, MBR_LB, MBR_UB, poly_name);   // SE (x만 증가, y그대로)
 
 					val.x = ne_x; val.y = ne_y;
-					tree.put(make_key(val.x, val.y), val, filePtr, MBR_LB, MBR_UB, poly_name);
-					
+					tree.put(make_key(val.x, val.y), val, filePtr, MBR_LB, MBR_UB, poly_name);   // NE
 
+					////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 					/* 데이터셋에서 MBR 한 변의 길이를 최대 -> Comp의 변 2개로 했을 경우 (면적을 구하거나 or {각 직선의 중간점 + 대각선 교차점} 추가로 삽입해서 빌드해야함) */
 					/* 근데 면적으로 하려면 "geohash를 어떤 x,y로 계산할지 애매해지니까" 기준점이 확실한 후자로 ㄱㄱ */
 					/* 이때, Comp의 변 3개 이상으로 가면, MBR이 너무 커지고 필터의 효과가 의미가 없어짐 => 논문 작성 시 가정 (제약사항) */
