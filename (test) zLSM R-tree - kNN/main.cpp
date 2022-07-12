@@ -102,6 +102,8 @@ void command_loop(LSMTree& tree) {
             break;
 
         case 'i':
+			tree.IO_Check = 0;
+			cout << " * init I/O Check = " << tree.IO_Check << endl;
             cout << "\n* Loading File and Start z-LSM R-Tree Building... " << endl;            
             FILE * file; 
             file = fopen("src/sample_data.txt", "r");

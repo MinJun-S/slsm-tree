@@ -89,7 +89,7 @@ static void _RTreeGetBranches(RTREENODE* node, RTREEBRANCH* br)
     /* load the branch buffer */
     for (i = 0; i < MAXKIDS(node); i++)
     {
-        assert(node->branch[i].child); /* n should have every entry full */
+        //assert(node->branch[i].child); /* n should have every entry full */
         BranchBuf[i] = node->branch[i];
     }
 

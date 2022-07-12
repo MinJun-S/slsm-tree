@@ -21,7 +21,7 @@
 #define  RTREE_H_INCLUDED
 
 /* PAGE_SIZE is normally the natural page size of the machine */
-#define  PAGE_SIZE    512
+#define  PAGE_SIZE    1024
 #define  DIMS_NUMB    3       /* number of dimensions */
 #define  SIDES_NUMB   2*DIMS_NUMB
 
@@ -47,8 +47,8 @@ typedef struct _RTREEBRANCH
 }RTREEBRANCH;
 
 /* max branching factor of a node */
-#define MAXCARD (int)((PAGE_SIZE-(2*sizeof(int))) / sizeof(RTREEBRANCH))
-//#define MAXCARD 5
+//#define MAXCARD (int)((PAGE_SIZE-(2*sizeof(int))) / sizeof(RTREEBRANCH))
+#define MAXCARD 5
 
 typedef struct _RTREENODE
 {
