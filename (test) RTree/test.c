@@ -48,6 +48,8 @@ int main(int argc, char** argv)
     int num = 0, visited = 0;
     RTREEMBR rect = {}, q = {};
 
+	printf("\n* Start r-Tree Build!!");
+
 	if (argc != 2)
 	{
 		printf("Usage: %s [file name] \n", argv[0]);
@@ -62,15 +64,17 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
+	
+
 	/* Build R-Tree */
 	double nx, ny;
 	RTREENODE* root = RTreeCreate();			   //<----------------------- make root
 
-	printf("\n * MAXCARD = %d", MAXCARD);
-	printf("\n * sizeof(int) = %d", sizeof(int));
-	printf("\n * sizeof(RTREEBRANCH) = %d", sizeof(RTREEBRANCH));
+	//printf("\n * MAXCARD = %d", MAXCARD);
+	//printf("\n * sizeof(int) = %d", sizeof(int));
+	//printf("\n * sizeof(RTREEBRANCH) = %d", sizeof(RTREEBRANCH));
 
-	printf("\n* Start r-Tree Build");
+	
 	while (fscanf(fp, "p %lf %lf\n", &nx, &ny) != EOF)
 	{
 		RTREEMBR p = { {nx, ny, 0, nx, ny, 0} };
