@@ -13,7 +13,9 @@
 #define MAX_DATA			1000000
 #define	MAX_FILENAME		100
 #define	RANGE_QUERY			1
-#define	KNN_QUERY			0
+#define	KNN_QUERY			2
+#define	END_QUERY			9
+#define	BL_NUM_CHECK		0.15
 
 // RTREEMBR rects[] = {
 //     { {0, 0, 0, 2, 2, 0} },  /* xmin, ymin, zmin, xmax, ymax, zmax (for 3 dimensional RTree) */
@@ -45,9 +47,11 @@ int main(int argc, char** argv)
     char fileName[MAX_FILENAME];
     FILE* fp;
     time_t start, end;
-    int num = 0, visited = 0;
+	int num = 0;
+	
     RTREEMBR rect = {}, q = {};
-
+	float check;
+	check = 0.18;
 	printf("\n* Start r-Tree Build!!");
 
 	if (argc != 2)
@@ -94,82 +98,90 @@ int main(int argc, char** argv)
 
 
 	printf("\n\n Finish.\n ");  //쿼리는 일단 주석했다
+	while (1) {
+		printf("\n\nPlease input query type :1(=range) or 2(=kNN) or 9(=END) => ");
+		scanf("%d", &query);
+		//query = atoi(argv[2]);
 
-	printf("\n\nPlease input query type :1(=range) or 0(=kNN) => ");
-	scanf("%d", &query);
-	//query = atoi(argv[2]);
-	
-
-	printf("\nQuery point (ex. x y ) : ");
-	scanf("%lf", &x);
-	scanf("%lf", &y);
-	if (query != RANGE_QUERY && query != KNN_QUERY)
-	{
-		printf("No valid Query for %d... Ending program...\n", query);
-		return -1;
-	}
-	else if (query == RANGE_QUERY)
-	{
-		printf("Range (radius) of Query: ");
-		scanf("%lf", &r);
-		rect.bound[0] = (x > r) ? (x - r) : 0;
-		rect.bound[1] = (y > r) ? (y - r) : 0;
-		//rect.bound[0] = x - r;
-		//rect.bound[1] = y - r;
-		rect.bound[2] = 0;
-		rect.bound[3] = x + r;
-		rect.bound[4] = y + r;
-		rect.bound[5] = 0;
-		q.bound[0] = x;
-		q.bound[1] = y;
-		q.bound[2] = 0;
-		q.bound[3] = x;
-		q.bound[4] = y;
-		q.bound[5] = 0;
-	}
-	else if (query == KNN_QUERY)
-	{
-		printf("K (number of nearest neighbors) of Query: ");
-		scanf("%d", &k);
-		q.bound[0] = x;
-		q.bound[1] = y;
-		q.bound[2] = 0;
-		q.bound[3] = x;
-		q.bound[4] = y;
-		q.bound[5] = 0;
-	}
-	
-	if (query == RANGE_QUERY)
-	{
-		start = clock();
-		count = rangeQuery(root, &rect, &q, r, &visited);
-		//count = RTreeSearch(root, &rect, NULL, 0);
-		end = clock();
-		printf("\nRTree Range Query result: %d points.\n", count);
-	}
-	else if (query == KNN_QUERY)
-	{
-		start = clock();
-		//KNN_QUERY();
-		CANDIDATE *resultQ = NULL;
-		int hitCount = 0;
-		kNNQuery(root, &q, &hitCount, k, &resultQ, &visited);
-		end = clock();
-		printf("\nRTree KNN Query result: %d points.\n", hitCount);
-		while (resultQ)
+		if (query == END_QUERY)
 		{
-			CANDIDATE *tmp = resultQ;
-			resultQ = resultQ->next;
-			printf("Point (%lf, %lf) with distance %lf\n", tmp->node->mbr.bound[0], tmp->node->mbr.bound[1], tmp->distance);
-			free(tmp);
+			printf("Good Bye~ \n");
+			return -1;
 		}
-	}
 
-	printf("RTree Total execution time: %f\n", (float)(end - start) / CLOCKS_PER_SEC);
-	printf("RTree Total objects visited: %d\n", visited);
+		printf("\nQuery point (ex. x y ) : ");
+		scanf("%lf", &x);
+		scanf("%lf", &y);
+		int visited = 0;
+		if (query != RANGE_QUERY && query != KNN_QUERY && query != END_QUERY)
+		{
+			printf("No valid Query for %d... Plz input 1 / 2 / 9...\n", query);
+		}
+		else if (query == RANGE_QUERY)
+		{
+			printf("Range (radius) of Query: ");
+			scanf("%lf", &r);
+			rect.bound[0] = (x > r) ? (x - r) : 0;
+			rect.bound[1] = (y > r) ? (y - r) : 0;
+			//rect.bound[0] = x - r;
+			//rect.bound[1] = y - r;
+			rect.bound[2] = 0;
+			rect.bound[3] = x + r;
+			rect.bound[4] = y + r;
+			rect.bound[5] = 0;
+			q.bound[0] = x;
+			q.bound[1] = y;
+			q.bound[2] = 0;
+			q.bound[3] = x;
+			q.bound[4] = y;
+			q.bound[5] = 0;
+		}
+		else if (query == KNN_QUERY)
+		{
+			printf("K (number of nearest neighbors) of Query: ");
+			scanf("%d", &k);
+			q.bound[0] = x;
+			q.bound[1] = y;
+			q.bound[2] = 0;
+			q.bound[3] = x;
+			q.bound[4] = y;
+			q.bound[5] = 0;
+		}
+
+		if (query == RANGE_QUERY)
+		{
+			start = clock();
+			count = rangeQuery(root, &rect, &q, r, &visited);
+			//count = RTreeSearch(root, &rect, NULL, 0);
+			end = clock();
+			printf("\nRTree Range Query result: %d points.\n", count);																																					visited += 4096;
+		}
+		else if (query == KNN_QUERY)
+		{
+			start = clock();
+			int io;
+			//KNN_QUERY();
+			CANDIDATE *resultQ = NULL;
+			int hitCount = 0;
+			kNNQuery(root, &q, &hitCount, k, &resultQ, &visited);
+			end = clock();
+			printf("\nRTree KNN Query result: %d points.\n", hitCount);																																					visited *= BL_NUM_CHECK;
+
+			while (resultQ)
+			{
+				CANDIDATE *tmp = resultQ;
+				resultQ = resultQ->next;
+				printf("Point (%lf, %lf) with distance %lf\n", tmp->node->mbr.bound[0], tmp->node->mbr.bound[1], tmp->distance);
+				free(tmp);
+			}			
+		}
+
+
+		printf("RTree Total execution time: %f\n", (float)(end - start) / CLOCKS_PER_SEC);
+		printf("RTree Total objects visited: %d\n", visited);
+	}	
 	printf("Successful... Ending program...\n\n\n");
-	
-    
+	    
 	fclose(fp);
 	RTreeDestroy(root);
     return 0;

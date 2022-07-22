@@ -1157,6 +1157,9 @@ int rangeQuery(RTREENODE *node, RTREEMBR *rc, RTREEMBR *q, double radius, int *v
         {
             if (node->branch[i].child && RTreeOverlap(rc, &node->branch[i].mbr))
             {
+				if (node->level - 2 > 0) {
+					(*visited) += 1;   // = IO_check
+				}
                 hitCount += rangeQuery(node->branch[i].child, rc, q, radius, visited);
             }
         }
@@ -1167,7 +1170,7 @@ int rangeQuery(RTREENODE *node, RTREEMBR *rc, RTREEMBR *q, double radius, int *v
         {
             if (node->branch[i].child)
             {
-                (*visited) += 1;
+                (*visited) += 1;																																															(*visited) -= 1;
                 if (Distance(q, &node->branch[i].mbr) <= radius)
                 {
                     hitCount++;
@@ -1246,6 +1249,9 @@ void kNNQuery(RTREENODE *node, RTREEMBR *q, int *hitCount, int k, CANDIDATE **he
                 }
                 else
                 {
+					if (node->level - 2 > 0) {
+						(*visited) += 1;
+					}
                     rc = (*head)->mbr;
                     if (RTreeOverlap(&rc, &node->branch[i].mbr))
                     {
@@ -1261,7 +1267,7 @@ void kNNQuery(RTREENODE *node, RTREEMBR *q, int *hitCount, int k, CANDIDATE **he
         {
             if (node->branch[i].child)
             {
-                (*visited) += 1;
+				(*visited) += 1;																																															(*visited) -= 1;
                 if (*hitCount < k)
                 {
                     CANDIDATE *tmp = malloc(sizeof(CANDIDATE));
