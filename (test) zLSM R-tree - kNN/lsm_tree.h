@@ -21,6 +21,7 @@ using namespace std;
 #define DEFAULT_BUFFER_NUM_PAGES 1000
 #define DEFAULT_THREAD_COUNT 4
 #define DEFAULT_BF_BITS_PER_ENTRY 0.5
+#define DEFAULT_CHECK_BLOCK_NUM 0.18
 
 #define GEO_X_MIN  125.06666667
 #define GEO_X_MAX  131.87222222
@@ -56,7 +57,7 @@ public:
     void KNN_query1(entry_t, int);
     void KNN_query2(entry_t, int);
 	void BPT_KNN_query(entry_t, int);
-	void BPT_KNN_query22(entry_t, int);
+	int BPT_KNN_query22(entry_t, int);
     //set<pair<float, entry_t>> NN_range(int, int, entry_t, float);
     
 	int IO_Check;

@@ -647,62 +647,76 @@ void LSMTree::save_file()
 void LSMTree::range_query(entry_t query_point, float distance)
 {
     vector<entry_t> range_result;
-
-    entry_t Lower; entry_t Upper;                                   // Lower, Upper of query_point's Query Range
-
+	int count = 0;
+    
     vector<Level>::iterator current_level;
     current_level = levels.begin();
 
-    Lower.val.x = query_point.val.x - distance; Lower.val.y = query_point.val.y - distance;
-    Upper.val.x = query_point.val.x + distance; Upper.val.y = query_point.val.y + distance;
-
-    Lower.key = make_key(Lower.val.x, Lower.val.y);
-    Upper.key = make_key(Upper.val.x, Upper.val.y);
+	//entry_t Lower; entry_t Upper;                                   // Lower, Upper of query_point's Query Range
+ //   Lower.val.x = query_point.val.x - distance; Lower.val.y = query_point.val.y - distance;
+ //   Upper.val.x = query_point.val.x + distance; Upper.val.y = query_point.val.y + distance;
+ //   Lower.key = make_key(Lower.val.x, Lower.val.y);
+ //   Upper.key = make_key(Upper.val.x, Upper.val.y);
 
     set<entry_t> disk_entries;
-
-    //////////// [ Range Query in Memory ] ////////////     
-    cout << "\n* Buffer Result " << endl;
-    cout << "-------------------------------------------------------------------------------------" << endl;
-    cout << "[   X             Y             KEY          Distance ]" << endl;
-
-    cout << left;
-    for (const auto& entry : buffer.entries)
-    {
-        if (Compute_distance(query_point, entry) < distance) {
-            range_result.push_back(entry);
-            cout << setw(9) << entry.val.x << "  |  " << setw(9) << entry.val.y << "  |  " << setw(11) << entry.key << "  |  " << setw(9) << Compute_distance(query_point, entry) << endl;
-        }
-    }
-
+	cout << left;
+    
     set<int>::iterator iter;
+	int num = 0, visited = 0;
+	int hitCount = 0;
+	RTREEMBR q = { {query_point.val.x, query_point.val.y, 0, query_point.val.x, query_point.val.y, 0} };
+	RTREEMBR rect = {};
+	rect.bound[0] = (query_point.val.x > distance) ? (query_point.val.x - distance) : 0;
+	rect.bound[1] = (query_point.val.y > distance) ? (query_point.val.y - distance) : 0;
+	rect.bound[2] = 0;
+	rect.bound[3] = query_point.val.x + distance;
+	rect.bound[4] = query_point.val.y + distance;
+	rect.bound[5] = 0;
 
-    //////////// [ Range Query in Disk Level ] //////////// 
-    for (int i = 0; i < DEFAULT_TREE_DEPTH; i++)
-    {
-        cout << "\n* Disk Level " << i + 1 << " Result " << endl;
-        cout << "-------------------------------------------------------------------------------------" << endl;
-        cout << "[   X             Y             KEY          Distance         Run Index ]" << endl;
+	for (int i = 0; i < DEFAULT_TREE_DEPTH; i++)
+	{
+		cout << "\n* zLSM Rtree Level " << i + 1 << " Result " << endl;
+		cout << "-------------------------------------------------------------------------------------" << endl;
 
-        //disk_entries = current_level->runs_list[0]->entries;
-        // Insert entry to Result
-        disk_entries = levels[i].runs_list[0]->entries;
-        for (const auto& entry : disk_entries)
-        {
-            if (Compute_distance(query_point, entry) < distance) {
-                range_result.push_back(entry);
-                cout << setw(9) << entry.val.x << "  |  " << setw(9) << entry.val.y << "  |  " << setw(11) << entry.key << "  |  " << setw(9) << Compute_distance(query_point, entry) << endl;
-            }
-        }
+		// Insert entry to Result		
+		RTREENODE* root = levels[i].runs_list[0]->root;
+		
+		count = RTreeRangeQuery(root, &rect, &q, distance, &visited);
 
-        IO_Check = IO_Check + int(levels[i].runs_list[0]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
-        if (levels[i].runs_list[0]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
-            IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
-        }
+		cout << "success level " << i + 1 << endl;
+		cout << "-------------------------------------------------------------------------------------" << endl;
+	}
 
-        cout << "-------------------------------------------------------------------------------------" << endl;
-        //current_level += 1;
-    }
+
+    //for (int i = 0; i < DEFAULT_TREE_DEPTH; i++)
+    //{
+    //    cout << "\n* Level " << i + 1 << " Result " << endl;
+    //    cout << "-------------------------------------------------------------------------------------" << endl;
+    //    cout << "[   X             Y             KEY          Distance         Run Index ]" << endl;
+
+    //    //disk_entries = current_level->runs_list[0]->entries;
+    //    // Insert entry to Result
+    //    disk_entries = levels[i].runs_list[0]->entries;
+    //    for (const auto& entry : disk_entries)
+    //    {
+    //        if (Compute_distance(query_point, entry) < distance) {
+    //            range_result.push_back(entry);
+    //            cout << setw(9) << entry.val.x << "  |  " << setw(9) << entry.val.y << "  |  " << setw(11) << entry.key << "  |  " << setw(9) << Compute_distance(query_point, entry) << endl;
+    //        }
+    //    }
+
+    //    IO_Check = IO_Check + int(levels[i].runs_list[0]->entries.size() / DEFAULT_BUFFER_NUM_PAGES);    // 다음레벨에 있으면 한번 보고(+1) 레벨에 따라 2배수 더해줌(+{다음레벨 들어있는 양/버퍼사이즈}) 몫
+    //    if (levels[i].runs_list[0]->entries.size() % DEFAULT_BUFFER_NUM_PAGES > 0) {						// {다음레벨 들어있는 양/버퍼사이즈} 해준게 딱 나눠 떨어지지 않기 때문에,
+    //        IO_Check = IO_Check + 1;																	// 자투리에 조금이라도 남아있을 수 있어서 +1해줌
+    //    }
+
+    //    cout << "-------------------------------------------------------------------------------------" << endl;
+    //    //current_level += 1;
+    //}
+	//
+	cout << "Change Change Range IO Check method" << endl;																																											visited += 4096;
+	cout << " * I/O Check = " << visited << endl;
+	//cout << " * I/O Check = " << visited*DEFAULT_CHECK_BLOCK_NUM << endl;
 }
 
 float LSMTree::Compute_distance(entry_t query_point, entry_t point) {
@@ -952,7 +966,7 @@ void LSMTree::KNN_query2(entry_t query_point, int k) {
 }
 
 //// [ z-LSM Rtree kNN ] ////
-void LSMTree::BPT_KNN_query22(entry_t query_point, int k)
+int LSMTree::BPT_KNN_query22(entry_t query_point, int k)
 {
 	RTREEMBR q = { {query_point.val.x, query_point.val.y, 0, query_point.val.x, query_point.val.y, 0} };    // query point인데 lower upper 지정할 필요 없음
 	RTREEPQ total_resultQ = { (RTREEPQNODE*)malloc(sizeof(RTREEPQNODE) * 10000), 0, 10000 , -1 };
@@ -962,11 +976,10 @@ void LSMTree::BPT_KNN_query22(entry_t query_point, int k)
 
 	int num = 0, visited = 0;
 	int hitCount = 0;
-
 	//////////// [ Range Query in Disk Level ] //////////// 
 	for (int i = 0; i < DEFAULT_TREE_DEPTH; i++)
 	{
-		cout << "\n* zLSM Rtree Disk Level " << i + 1 << " Result " << endl;
+		cout << "\n* zLSM Rtree Level " << i + 1 << " Result " << endl;
 		cout << "-------------------------------------------------------------------------------------" << endl;
 
 		// Insert entry to Result		
@@ -982,8 +995,10 @@ void LSMTree::BPT_KNN_query22(entry_t query_point, int k)
 	{
 		CANDIDATE *tmp = resultQ;
 		resultQ = resultQ->next;
-		printf("Point ( %lf,  %lf )  with distance %lf\n", tmp->node->mbr.bound[0], tmp->node->mbr.bound[1], tmp->distance);
+		printf("Point ( %lf,  %lf )\n", tmp->node->mbr.bound[0], tmp->node->mbr.bound[1]);
+		//printf("Point ( %lf,  %lf )  with distance %lf\n", tmp->node->mbr.bound[0], tmp->node->mbr.bound[1], tmp->distance);
 		free(tmp);
 	}
-	cout << "visited (zLSM R-tree IO check) : " << visited << endl;
+	//cout << "visited (zLSM R-tree IO check) : " << visited << endl;
+	return visited;
 }

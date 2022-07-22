@@ -290,7 +290,8 @@ void RTreePQPush(RTREEPQ* pq, RTREEPQNODE node);
 RTREEPQNODE RTreePQPop(RTREEPQ* pq);
 
 
-int RTreeRangeQuery(RTREENODE** root, RTREEMBR q, REALTYPE radius);
+//int RTreeRangeQuery(RTREENODE** root, RTREEMBR q, REALTYPE radius);
+int RTreeRangeQuery(RTREENODE *node, RTREEMBR *rc, RTREEMBR *q, double radius, int *visited);
 
 RTREEPQ RTreeKNNQuery(RTREENODE** root, RTREEMBR q, int K);
 

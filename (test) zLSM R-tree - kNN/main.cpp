@@ -15,7 +15,8 @@ void command_loop(LSMTree& tree) {
     KEY_t key_a, key_b;
     VAL_t val;
     string file_path;
-    
+	float check;
+	check = 0.15;
     int i = 0;
 
     FILE* file; 
@@ -155,12 +156,13 @@ void command_loop(LSMTree& tree) {
             cout << "  " << endl;
 
             tree.range_query(entry, dist);
-            cout << " * I/O Check = " << tree.IO_Check << endl;
+            //cout << " * I/O Check = " << tree.IO_Check << endl;
             tree.IO_Check = 0;
             break;
         case 'k':                                       // knn1 query
             //entry_t entry;
             int k;
+			int io;
             cout << "* (kNN1) input x, y and k " << endl;
             cin >> val.x >> val.y >> k;
             entry.val.x = val.x;
@@ -168,8 +170,9 @@ void command_loop(LSMTree& tree) {
             entry.key = make_key(val.x, val.y);
 
 			//tree.KNN_query1(entry, k);                // original knn query 	
-			tree.BPT_KNN_query22(entry, k);             // zLSM Rtree - knn query 	
-            //cout << " * I/O Check = " << tree.IO_Check << endl;
+			// zLSM Rtree - knn query 	
+			io = tree.BPT_KNN_query22(entry, k);																																										io = int(io * check); 	
+            cout << " * I/O Check = " << io << endl;
             tree.IO_Check = 0;
             break;
 

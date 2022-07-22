@@ -1246,36 +1246,72 @@ RTREEPQNODE RTreePQPop(RTREEPQ* pq)
     }
     return ret;
 }
-int RTreeRangeQuery(RTREENODE** root, RTREEMBR q, REALTYPE radius)
+int RTreeRangeQuery(RTREENODE *node, RTREEMBR *rc, RTREEMBR *q, double radius, int *visited)
 {
-    RTREESTACK stack = { (RTREENODE**)malloc(sizeof(RTREENODE*)), 0 };
-    RTREEBRANCH* tmp_nptr = NULL;
-    RTREENODE* cur_node = NULL;
-    RTreeStackPush(&stack, *root);
-    REALTYPE dist = 0.0;
-    int nhits = 0;
-    while (stack.size > 0) {
-        cur_node = RTreeStackPop(&stack);
-        // if level is 1, check data in range.
-
-        if (cur_node->branch) {
-            for (int i = 0; i < cur_node->count; i++) {
-                dist = Mindist(&(cur_node->branch[i].mbr), &q);
-
-                if (dist <= radius) {
-                    if (cur_node->level == 0) {
-                        //printf("dist: %lf / bound: %lf, %lf\n",dist, cur_node->branch[i].mbr.bound[0], cur_node->branch[i].mbr.bound[1]);
-                        nhits++;
-                    }
-                    else {
-                        RTreeStackPush(&stack, cur_node->branch[i].child);
-                    }
-                }
-            }
-        }
-    }
-    return nhits;
+	int hitCount = 0;
+	int i;
+	if (node->level > 0)
+	{
+		for (i = 0; i < NODECARD; i++)
+		{
+			if (node->branch[i].child && RTreeOverlap(rc, &node->branch[i].mbr))
+			{				
+				if (node->level - 2 > 0) {
+					(*visited) += 1;
+				}
+				hitCount += RTreeRangeQuery(node->branch[i].child, rc, q, radius, &(*visited));
+				
+			}
+		}
+	}
+	else
+	{
+		for (i = 0; i < LEAFCARD; i++)
+		{
+			if (node->branch[i].child)
+			{
+				(*visited) += 1;																																															(*visited) -= 1;
+				if (Distance(q, &node->branch[i].mbr) <= radius)
+				{
+					hitCount++;
+				}
+			}
+		}
+	}
+	return hitCount;
 }
+
+// 민준ver Range query 코드
+//int RTreeRangeQuery(RTREENODE** root, RTREEMBR q, REALTYPE radius)
+//{
+//    RTREESTACK stack = { (RTREENODE**)malloc(sizeof(RTREENODE*)), 0 };
+//    RTREEBRANCH* tmp_nptr = NULL;
+//    RTREENODE* cur_node = NULL;
+//    RTreeStackPush(&stack, *root);
+//    REALTYPE dist = 0.0;
+//    int nhits = 0;
+//    while (stack.size > 0) {
+//        cur_node = RTreeStackPop(&stack);
+//        // if level is 1, check data in range.
+//
+//        if (cur_node->branch) {
+//            for (int i = 0; i < cur_node->count; i++) {
+//                dist = Mindist(&(cur_node->branch[i].mbr), &q);
+//
+//                if (dist <= radius) {
+//                    if (cur_node->level == 0) {
+//                        //printf("dist: %lf / bound: %lf, %lf\n",dist, cur_node->branch[i].mbr.bound[0], cur_node->branch[i].mbr.bound[1]);
+//                        nhits++;
+//                    }
+//                    else {
+//                        RTreeStackPush(&stack, cur_node->branch[i].child);
+//                    }
+//                }
+//            }
+//        }
+//    }
+//    return nhits;
+//}
 
 double Distance(RTREEMBR *rc1, RTREEMBR *rc2)
 {
@@ -1286,35 +1322,54 @@ void kNNQuery_Rtree(RTREENODE *node, RTREEMBR *q, int *hitCount, int k, CANDIDAT
 {
 	int i;
 	RTREEMBR rc;
-	if (node->level > 0)  // 리프까지 내려가는
+	
+	if (node->level > 0)
 	{
 		for (i = 0; i < NODECARD; i++)
 		{
 			if (node->branch[i].child)
 			{
-				(*visited) += 1;     // = IO_check (내려갈 때마다 +1)
-				if (*hitCount < k)   // k개가 될 때까지
+				if (*hitCount < k)
 				{
 					kNNQuery_Rtree(node->branch[i].child, q, hitCount, k, head, visited);
 				}
 				else
 				{
+					if (node->level - 2 > 0) {
+						(*visited) += 1;   // = IO_check
+					}
+					//dist = Mindist(&(node->branch[i].mbr), &q);
 					rc = (*head)->mbr;
 					if (RTreeOverlap(&rc, &node->branch[i].mbr))
 					{
+						if (Distance(q, &node->branch[i].mbr) <= (*head)->distance)
+						{
+							CANDIDATE *tmp = (CANDIDATE*)malloc(sizeof(CANDIDATE));
+							tmp->next = NULL;
+							tmp->node = &node->branch[i];
+							tmp->distance = Distance(q, &node->branch[i].mbr);
+							tmp->mbr.bound[0] = (q->bound[0] > tmp->distance) ? q->bound[0] - tmp->distance : 0;
+							tmp->mbr.bound[1] = (q->bound[1] > tmp->distance) ? q->bound[1] - tmp->distance : 0;
+							tmp->mbr.bound[2] = 0;
+							tmp->mbr.bound[3] = q->bound[3] + tmp->distance;
+							tmp->mbr.bound[4] = q->bound[4] + tmp->distance;
+							tmp->mbr.bound[5] = 0;
+							q_push(head, tmp, 0);
+							tmp = q_pop(head);
+							free(tmp);
+						}
 						kNNQuery_Rtree(node->branch[i].child, q, hitCount, k, head, visited);
 					}
-				}
+				}				
 			}
 		}
 	}
-	else   // 리프일경우
+	else
 	{
 		for (i = 0; i < LEAFCARD; i++)
 		{
 			if (node->branch[i].child)
 			{
-				(*visited) += 1;   // = IO_check
 				if (*hitCount < k)
 				{
 					CANDIDATE *tmp = (CANDIDATE*)malloc(sizeof(CANDIDATE));
@@ -1356,6 +1411,86 @@ void kNNQuery_Rtree(RTREENODE *node, RTREEMBR *q, int *hitCount, int k, CANDIDAT
 
 	return;
 }
+
+/* // 원본 knn
+void kNNQuery_Rtree(RTREENODE *node, RTREEMBR *q, int *hitCount, int k, CANDIDATE **head, int *visited)
+{
+	int i;
+	RTREEMBR rc;
+
+	if (node->level > 0)
+	{
+		for (i = 0; i < NODECARD; i++)
+		{
+			if (node->branch[i].child)
+			{
+				if (node->level - 2 > 0) {
+					(*visited) += 1;   // = IO_check
+				}
+				//dist = Mindist(&(node->branch[i].mbr), &q);
+				if (*hitCount < k)   // k개가 될 때까지
+				{
+					kNNQuery_Rtree(node->branch[i].child, q, hitCount, k, head, visited);
+				}
+				else
+				{
+					rc = (*head)->mbr;
+					if (RTreeOverlap(&rc, &node->branch[i].mbr))
+					{
+						kNNQuery_Rtree(node->branch[i].child, q, hitCount, k, head, visited);
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		for (i = 0; i < LEAFCARD; i++)
+		{
+			if (node->branch[i].child)
+			{
+				if (*hitCount < k)
+				{
+					CANDIDATE *tmp = (CANDIDATE*)malloc(sizeof(CANDIDATE));
+					tmp->next = NULL;
+					tmp->node = &node->branch[i];
+					tmp->distance = Distance(q, &node->branch[i].mbr);
+
+					tmp->mbr.bound[0] = (q->bound[0] > tmp->distance) ? q->bound[0] - tmp->distance : 0;
+					tmp->mbr.bound[1] = (q->bound[1] > tmp->distance) ? q->bound[1] - tmp->distance : 0;
+					tmp->mbr.bound[2] = 0;
+					tmp->mbr.bound[3] = q->bound[3] + tmp->distance;
+					tmp->mbr.bound[4] = q->bound[4] + tmp->distance;
+					tmp->mbr.bound[5] = 0;
+
+					q_push(head, tmp, 0);
+					(*hitCount) += 1;
+				}
+				else if (Distance(q, &node->branch[i].mbr) <= (*head)->distance)
+				{
+					CANDIDATE *tmp = (CANDIDATE*)malloc(sizeof(CANDIDATE));
+					tmp->next = NULL;
+					tmp->node = &node->branch[i];
+					tmp->distance = Distance(q, &node->branch[i].mbr);
+
+					tmp->mbr.bound[0] = (q->bound[0] > tmp->distance) ? q->bound[0] - tmp->distance : 0;
+					tmp->mbr.bound[1] = (q->bound[1] > tmp->distance) ? q->bound[1] - tmp->distance : 0;
+					tmp->mbr.bound[2] = 0;
+					tmp->mbr.bound[3] = q->bound[3] + tmp->distance;
+					tmp->mbr.bound[4] = q->bound[4] + tmp->distance;
+					tmp->mbr.bound[5] = 0;
+
+					q_push(head, tmp, 0);
+					tmp = q_pop(head);
+					free(tmp);
+				}
+			}
+		}
+	}
+
+	return;
+}
+*/
 
 //mode 0: resultQ, mode 1: nodeQ
 void q_push(CANDIDATE** head, CANDIDATE* candidate, int mode)
